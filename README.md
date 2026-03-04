@@ -1,0 +1,277 @@
+# Go-Clappie
+
+A Go port of [Clappie](https://github.com/whatnickcodes/clappie) — the personal assistant framework that runs inside tmux and communicates with Claude Code.
+
+Single binary. No runtime dependencies. Cross-platform.
+
+## Overview
+
+Go-Clappie is a complete rewrite of the original JavaScript/Bun-based Clappie framework in Go. It preserves the same architecture, file formats, and tmux-based workflow while compiling down to a single ~11MB binary.
+
+### What It Does
+
+- Runs a TUI display engine inside tmux panes
+- Communicates with Claude Code via `[clappie]` messages typed into tmux
+- File-based state management (no database) using `.txt` files with `[meta]` blocks
+- CLI sends commands to a daemon process via Unix sockets (TCP fallback on Windows)
+
+### Subsystems
+
+| Subsystem | Description |
+|-----------|-------------|
+| **Display Engine** | Raw terminal TUI with view stack, keyboard/mouse input, themes |
+| **UI Kit** | 14 components: buttons, toggles, text inputs, textareas, checkboxes, radios, selects, progress bars, loaders, labels, dividers, alerts |
+| **Chores** | Human approval queue for AI-proposed actions |
+| **Notifications** | Bidirectional sync pipeline with aggressive TLDR |
+| **Heartbeat** | AI-powered cron scheduler with interval-based checks |
+| **Background** | Long-running app management via tmux sessions |
+| **Sidekicks** | Autonomous Claude sessions with webhook routing |
+| **Parties** | Gamified AI swarm simulations with dice, ledgers, identities |
+| **OAuth** | Shared token management with PKCE auth flows |
+| **Skills** | Skill discovery from `.claude/skills/*/` directories |
+| **Graphics** | Unicode quarter-block pixel art and animated scenes |
+
+## Requirements
+
+- **Go 1.25+** (for building from source)
+- **tmux** (required at runtime)
+- A terminal emulator with ANSI color support
+
+## Installation
+
+### From Source
+
+```bash
+git clone https://github.com/brunojuliao/go-clappie.git
+cd go-clappie
+go build -o clappie .
+```
+
+Or install directly:
+
+```bash
+go install github.com/brunojuliao/go-clappie@latest
+```
+
+### Pre-built Binaries
+
+Download from [Releases](https://github.com/brunojuliao/go-clappie/releases) for your platform.
+
+## Building
+
+### Single Target
+
+```bash
+make build        # Build for current OS/arch
+make install      # go install
+```
+
+### All Targets
+
+```bash
+make build-all    # Cross-compile all 5 targets
+```
+
+This produces binaries in `dist/`:
+
+| Target | File | OS | Architecture |
+|--------|------|----|-------------|
+| Linux x86_64 | `clappie-linux-amd64` | Linux | amd64 |
+| Linux ARM | `clappie-linux-arm64` | Linux | arm64 |
+| macOS Intel | `clappie-darwin-amd64` | macOS | amd64 |
+| macOS Apple Silicon | `clappie-darwin-arm64` | macOS | arm64 |
+| Windows | `clappie-windows-amd64.exe` | Windows | amd64 |
+
+### Other Commands
+
+```bash
+make test         # Run all tests
+make vet          # Static analysis
+make fmt          # Format code
+make lint         # Run golangci-lint
+make clean        # Remove build artifacts
+```
+
+## Supported Platforms
+
+### Linux
+
+Works out of the box. tmux is available in all major package managers:
+
+```bash
+# Debian/Ubuntu
+sudo apt install tmux
+
+# Arch
+sudo pacman -S tmux
+
+# Fedora
+sudo dnf install tmux
+```
+
+### macOS
+
+Works out of the box. Install tmux via Homebrew:
+
+```bash
+brew install tmux
+```
+
+### Windows
+
+Clappie on Windows requires **Git for Windows** (Git Bash) with **tmux** installed manually. tmux is not included with Git Bash by default.
+
+#### Option A: Via MSYS2 (Recommended)
+
+1. **Install [MSYS2](https://www.msys2.org/)** if you don't have it already.
+
+2. **Install tmux in MSYS2:**
+   ```bash
+   pacman -S tmux
+   ```
+
+3. **Copy the required files** from MSYS2 to Git for Windows:
+
+   From `C:\msys64\usr\bin\` copy these files to `C:\Program Files\Git\usr\bin\`:
+   - `tmux.exe`
+   - `msys-event-2-1-*.dll` (e.g., `msys-event-2-1-7.dll`)
+   - `msys-event_core-2-1-*.dll` (if present)
+
+4. **Restart Git Bash** and verify:
+   ```bash
+   tmux -V
+   ```
+
+#### Option B: Direct Package Download
+
+1. **Download packages** from the [MSYS2 repository](https://repo.msys2.org/msys/x86_64/):
+   - `tmux-*.pkg.tar.zst`
+   - `libevent-*.pkg.tar.xz`
+
+2. **Extract and copy** `tmux.exe` and the `msys-event` DLLs to `C:\Program Files\Git\usr\bin\`.
+
+#### Important Notes for Windows
+
+- tmux **only works with MinTTY** (`git-bash.exe`). It will not work with `cmd.exe`, PowerShell, or Windows Terminal running `bash.exe` directly.
+- Make sure Git for Windows and MSYS2 are both **64-bit** installations.
+- IPC uses TCP localhost (port derived from socket path hash) instead of Unix sockets on Windows.
+
+## Usage
+
+Clappie runs inside a tmux session. Basic commands:
+
+```bash
+# Display management
+clappie display push heartbeat       # Open the heartbeat dashboard
+clappie display push chores          # Open the chore approval queue
+clappie display pop                  # Close current view
+clappie display list                 # List open displays
+
+# Background apps
+clappie background start <app>       # Start a background app
+clappie background list              # List running apps
+
+# Sidekicks
+clappie sidekick spawn <name>        # Spawn an autonomous Claude session
+clappie sidekick list                # List active sidekicks
+
+# Parties (AI simulations)
+clappie parties init <game>          # Initialize a game
+clappie parties roll 2d6+3           # Roll dice
+
+# OAuth
+clappie oauth auth <provider>        # Start OAuth flow
+clappie oauth status                 # Show token status
+
+# General
+clappie list displays                # List all 15 built-in views
+clappie list skills                  # List discovered skills
+clappie --help                       # Full command reference
+```
+
+## Project Structure
+
+```
+go-clappie/
+  main.go                     # Entry point
+  Makefile                    # Build targets
+  cmd/                        # Cobra CLI commands (9 files)
+  internal/
+    platform/                 # Cross-platform abstractions (IPC, paths, tmux)
+    ipc/                      # JSON command/response protocol over sockets
+    tmux/                     # tmux session/pane/sendkeys operations
+    engine/                   # Display engine daemon (view stack, renderer, theme)
+    uikit/                    # 14 UI components
+    graphics/                 # Quarter-block pixel art and animations
+    filestore/                # File-based state with [meta] block format
+    chores/                   # Human approval queue
+    notifications/            # Bidirectional sync pipeline
+    heartbeat/                # AI-powered cron scheduler
+    background/               # Long-running app management
+    sidekicks/                # Autonomous Claude sessions + webhook server
+    parties/                  # AI swarm simulations (dice, ledgers, identities)
+    oauth/                    # Token management with PKCE
+    skills/                   # Skill discovery
+    displays/                 # 15 built-in display views
+```
+
+## Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| [github.com/spf13/cobra](https://github.com/spf13/cobra) | CLI framework |
+| [github.com/mattn/go-runewidth](https://github.com/mattn/go-runewidth) | Visual width calculation (emoji, CJK) |
+| [golang.org/x/term](https://pkg.go.dev/golang.org/x/term) | Raw terminal mode, size detection |
+
+Everything else uses the Go standard library.
+
+## Testing
+
+```bash
+go test ./...
+```
+
+Test suites cover: filestore meta parsing, IPC round-trip, keyboard parsing, ANSI width calculation, dice rolling, heartbeat scheduling, and file CRUD operations.
+
+## Architecture
+
+### Adaptive IPC
+
+- **Linux/macOS:** Unix domain sockets at `/tmp/clappie-{TMUX_PANE}.sock`
+- **Windows:** TCP on `127.0.0.1:{port}` where port is derived from an FNV hash of the socket path
+
+### Display Daemon
+
+The CLI spawns itself as a daemon process (`clappie __daemon`). The daemon:
+1. Sets stdin to raw mode
+2. Enables mouse tracking (SGR mode)
+3. Runs an IPC server on a goroutine
+4. Main loop: select over stdin events, IPC commands, signals, and timers
+
+### File Format
+
+All state is stored as `.txt` files with optional metadata blocks:
+
+```
+Body content goes here
+
+---
+[meta]
+key: value
+status: pending
+created: 2025-03-03 14:30
+```
+
+### Import Cycle Resolution
+
+The `engine` package cannot import `displays` (circular dependency). Solution: the view registry is injected via `DaemonConfig.Registry` at startup from `cmd/daemon.go`.
+
+## Credits
+
+Based on the original [Clappie](https://github.com/whatnickcodes/clappie) by [@whatnickcodes](https://github.com/whatnickcodes).
+
+Co-created by [Bruno Juliao](https://github.com/brunojuliao) and [Claude](https://claude.ai) (Anthropic's AI assistant). The entire Go codebase — 102 source files across 13 subsystems — was pair-programmed from the ground up with Claude Code.
+
+## License
+
+See [LICENSE](LICENSE) for details.
