@@ -152,7 +152,7 @@ func init() {
 // startDaemon spawns the daemon process in a new tmux pane.
 func startDaemon(initialView string, initialData json.RawMessage) error {
 	if !platform.InTmux() {
-		return fmt.Errorf("clappie must be run inside tmux")
+		return fmt.Errorf("go-clappie must be run inside tmux")
 	}
 
 	claudePane := platform.TmuxPaneID()
@@ -172,13 +172,13 @@ func startDaemon(initialView string, initialData json.RawMessage) error {
 	}
 
 	// Prepare environment
-	env := fmt.Sprintf("CLAPPIE_CLAUDE_PANE=%s CLAPPIE_SOCKET_PATH=%s CLAPPIE_INITIAL_VIEW=%s",
+	env := fmt.Sprintf("GO_CLAPPIE_CLAUDE_PANE=%s GO_CLAPPIE_SOCKET_PATH=%s GO_CLAPPIE_INITIAL_VIEW=%s",
 		claudePane, socketPath, initialView)
 	if initialData != nil {
-		env += fmt.Sprintf(" CLAPPIE_INITIAL_DATA='%s'", string(initialData))
+		env += fmt.Sprintf(" GO_CLAPPIE_INITIAL_DATA='%s'", string(initialData))
 	}
-	if os.Getenv("CLAPPIE_ALLOW_SENDKEYS") != "" {
-		env += " CLAPPIE_ALLOW_SENDKEYS=1"
+	if os.Getenv("GO_CLAPPIE_ALLOW_SENDKEYS") != "" {
+		env += " GO_CLAPPIE_ALLOW_SENDKEYS=1"
 	}
 
 	daemonCmd := fmt.Sprintf("%s %s __daemon", env, binary)
@@ -217,7 +217,7 @@ func startDaemonDirect() error {
 		return err
 	}
 
-	socketPath := os.Getenv("CLAPPIE_SOCKET_PATH")
+	socketPath := os.Getenv("GO_CLAPPIE_SOCKET_PATH")
 	if socketPath == "" {
 		socketPath = platform.SocketPath()
 	}

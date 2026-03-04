@@ -27,7 +27,7 @@ func NewHelloWorldView(ctx *engine.Context) engine.View {
 			lines = append(lines, "")
 		}
 
-		lines = append(lines, engine.StyleDim("  Welcome to Clappie!"))
+		lines = append(lines, engine.StyleDim("  Welcome to Go-Clappie!"))
 		lines = append(lines, engine.StyleDim("  This is a demo display."))
 		lines = append(lines, "")
 		lines = append(lines, fmt.Sprintf("  Party mode: %v", partyMode))

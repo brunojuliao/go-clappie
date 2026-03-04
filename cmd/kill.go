@@ -12,7 +12,7 @@ import (
 
 var killCmd = &cobra.Command{
 	Use:   "kill",
-	Short: "Kill all clappie processes (display, background, sidekicks)",
+	Short: "Kill all go-clappie processes (display, background, sidekicks)",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Kill display daemon
 		socketPath := platform.SocketPath()

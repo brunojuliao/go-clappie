@@ -52,7 +52,7 @@ func Complete(root, summary string) error {
 	sk := active[len(active)-1]
 
 	// Send completion message
-	tmux.SendKeysLiteral(sk.PaneID, fmt.Sprintf("[clappie] Sidekick complete → %s\n", summary))
+	tmux.SendKeysLiteral(sk.PaneID, fmt.Sprintf("[go-clappie] Sidekick complete → %s\n", summary))
 
 	// Update status
 	return updateStatus(root, sk.ID, "completed")
@@ -60,7 +60,7 @@ func Complete(root, summary string) error {
 
 // Report sends a report back to the main Claude pane.
 func Report(root, message string) error {
-	tmux.SubmitToClaudePane("", fmt.Sprintf("[clappie] Sidekick report → %s", message))
+	tmux.SubmitToClaudePane("", fmt.Sprintf("[go-clappie] Sidekick report → %s", message))
 	return nil
 }
 

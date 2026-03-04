@@ -18,9 +18,9 @@ var (
 
 // rootCmd represents the base command.
 var rootCmd = &cobra.Command{
-	Use:   "clappie",
-	Short: "Clappie — personal assistant framework",
-	Long:  "Clappie is a personal assistant framework that runs inside tmux, communicating with Claude Code via [clappie] messages.",
+	Use:   "go-clappie",
+	Short: "Go-Clappie — personal assistant framework",
+	Long:  "Go-Clappie is a personal assistant framework that runs inside tmux, communicating with Claude Code via [go-clappie] messages.",
 }
 
 // Execute runs the root command.

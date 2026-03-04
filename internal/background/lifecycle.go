@@ -9,7 +9,7 @@ import (
 	"github.com/brunojuliao/go-clappie/internal/tmux"
 )
 
-const sessionPrefix = "clappie-bg-"
+const sessionPrefix = "go-clappie-bg-"
 
 // Start starts a background app in a new tmux session.
 func Start(root, name string) error {

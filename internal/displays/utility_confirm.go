@@ -31,7 +31,7 @@ func NewUtilityConfirmView(ctx *engine.Context) engine.View {
 		Label:    "Yes",
 		Shortcut: "Y",
 		OnPress: func() {
-			ctx.Submit("[clappie] Confirm → yes")
+			ctx.Submit("[go-clappie] Confirm → yes")
 			ctx.Pop()
 		},
 	}))
@@ -40,7 +40,7 @@ func NewUtilityConfirmView(ctx *engine.Context) engine.View {
 		Label:    "No",
 		Shortcut: "N",
 		OnPress: func() {
-			ctx.Submit("[clappie] Confirm → no")
+			ctx.Submit("[go-clappie] Confirm → no")
 			ctx.Pop()
 		},
 	}))

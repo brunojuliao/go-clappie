@@ -80,12 +80,12 @@ func (c *Context) Pop() {
 	c.daemon.render()
 }
 
-// Submit types a [clappie] message into Claude's pane and presses Enter.
+// Submit types a [go-clappie] message into Claude's pane and presses Enter.
 func (c *Context) Submit(message string) {
 	tmux.SubmitToClaudePane(c.daemon.config.ClaudePane, message)
 }
 
-// Send types a [clappie] message into Claude's pane without pressing Enter.
+// Send types a [go-clappie] message into Claude's pane without pressing Enter.
 func (c *Context) Send(message string) {
 	tmux.SendToClaudePane(c.daemon.config.ClaudePane, message)
 }

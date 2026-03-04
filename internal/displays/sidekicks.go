@@ -34,7 +34,7 @@ func NewSidekicksView(ctx *engine.Context) engine.View {
 		if len(activeSidekicks) == 0 {
 			lines = append(lines, "  No active sidekicks.")
 			lines = append(lines, "")
-			lines = append(lines, engine.StyleDim("  Use 'clappie sidekick spawn \"prompt\"' to spawn one."))
+			lines = append(lines, engine.StyleDim("  Use 'go-clappie sidekick spawn \"prompt\"' to spawn one."))
 		} else {
 			lines = append(lines, fmt.Sprintf("  %d active sidekicks", len(activeSidekicks)))
 			lines = append(lines, "")

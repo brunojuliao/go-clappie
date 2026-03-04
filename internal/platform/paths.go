@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// ProjectRoot finds the clappie project root by walking up from cwd
+// ProjectRoot finds the go-clappie project root by walking up from cwd
 // looking for a directory containing recall/, chores/, or notifications/.
 func ProjectRoot() (string, error) {
 	dir, err := os.Getwd()
@@ -24,7 +24,7 @@ func ProjectRoot() (string, error) {
 		}
 		dir = parent
 	}
-	return "", fmt.Errorf("clappie project root not found (no recall/, chores/, or notifications/ directory found)")
+	return "", fmt.Errorf("go-clappie project root not found (no recall/, chores/, or notifications/ directory found)")
 }
 
 func isProjectRoot(dir string) bool {
@@ -46,7 +46,7 @@ func SocketPath() string {
 	}
 	// Sanitize pane ID for use in filename
 	paneID = strings.ReplaceAll(paneID, "%", "")
-	return filepath.Join(os.TempDir(), fmt.Sprintf("clappie-%s.sock", paneID))
+	return filepath.Join(os.TempDir(), fmt.Sprintf("go-clappie-%s.sock", paneID))
 }
 
 // EnsureDir creates a directory and all parents if they don't exist.

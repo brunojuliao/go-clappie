@@ -11,7 +11,7 @@ func NotifyStateChange(participant Participant, key, value string) error {
 	if participant.PaneID == "" {
 		return nil
 	}
-	msg := fmt.Sprintf("[clappie] State changed → %s = %s", key, value)
+	msg := fmt.Sprintf("[go-clappie] State changed → %s = %s", key, value)
 	return tmux.SendKeysLiteral(participant.PaneID, msg+"\n")
 }
 

@@ -11,7 +11,7 @@ Go-Clappie is a complete rewrite of the original JavaScript/Bun-based Clappie fr
 ### What It Does
 
 - Runs a TUI display engine inside tmux panes
-- Communicates with Claude Code via `[clappie]` messages typed into tmux
+- Communicates with Claude Code via `[go-clappie]` messages typed into tmux
 - File-based state management (no database) using `.txt` files with `[meta]` blocks
 - CLI sends commands to a daemon process via Unix sockets (TCP fallback on Windows)
 
@@ -239,7 +239,7 @@ Test suites cover: filestore meta parsing, IPC round-trip, keyboard parsing, ANS
 
 ### Adaptive IPC
 
-- **Linux/macOS:** Unix domain sockets at `/tmp/clappie-{TMUX_PANE}.sock`
+- **Linux/macOS:** Unix domain sockets at `/tmp/go-clappie-{TMUX_PANE}.sock`
 - **Windows:** TCP on `127.0.0.1:{port}` where port is derived from an FNV hash of the socket path
 
 ### Display Daemon

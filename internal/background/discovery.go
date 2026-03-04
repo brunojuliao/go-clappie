@@ -10,7 +10,7 @@ import (
 // Discover scans for background-capable apps by looking for .background marker files.
 func Discover(root string) ([]App, error) {
 	skillsDir := platform.SkillsDir(root)
-	clappieSkillDir := filepath.Join(skillsDir, "clappie", "clapps")
+	clappieSkillDir := filepath.Join(skillsDir, "go-clappie", "clapps")
 
 	var apps []App
 

@@ -113,7 +113,7 @@ func NewChoresView(ctx *engine.Context) engine.View {
 	view.RegisterShortcut("A", "Approve", func() {
 		if selectedIdx < len(choresList) {
 			c := choresList[selectedIdx]
-			ctx.Submit(fmt.Sprintf("[clappie] Chore approved → %s", c.Title))
+			ctx.Submit(fmt.Sprintf("[go-clappie] Chore approved → %s", c.Title))
 			// Update status
 			_, blocks, _ := filestore.ReadAndParse(c.Path)
 			filestore.SetMetaField(&blocks, "chore-meta", "status", "approved")
@@ -126,7 +126,7 @@ func NewChoresView(ctx *engine.Context) engine.View {
 	view.RegisterShortcut("X", "Reject", func() {
 		if selectedIdx < len(choresList) {
 			c := choresList[selectedIdx]
-			ctx.Submit(fmt.Sprintf("[clappie] Chore rejected → %s", c.Title))
+			ctx.Submit(fmt.Sprintf("[go-clappie] Chore rejected → %s", c.Title))
 			_, blocks, _ := filestore.ReadAndParse(c.Path)
 			filestore.SetMetaField(&blocks, "chore-meta", "status", "rejected")
 			filestore.WriteWithMeta(c.Path, c.Body, blocks)

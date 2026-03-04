@@ -16,14 +16,14 @@ var daemonCmd = &cobra.Command{
 	Short:  "Run the display daemon (internal)",
 	Hidden: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		socketPath := os.Getenv("CLAPPIE_SOCKET_PATH")
+		socketPath := os.Getenv("GO_CLAPPIE_SOCKET_PATH")
 		if socketPath == "" {
-			return fmt.Errorf("CLAPPIE_SOCKET_PATH not set")
+			return fmt.Errorf("GO_CLAPPIE_SOCKET_PATH not set")
 		}
 
-		initialView := os.Getenv("CLAPPIE_INITIAL_VIEW")
-		initialData := os.Getenv("CLAPPIE_INITIAL_DATA")
-		claudePane := os.Getenv("CLAPPIE_CLAUDE_PANE")
+		initialView := os.Getenv("GO_CLAPPIE_INITIAL_VIEW")
+		initialData := os.Getenv("GO_CLAPPIE_INITIAL_DATA")
+		claudePane := os.Getenv("GO_CLAPPIE_CLAUDE_PANE")
 
 		d, err := engine.NewDaemon(engine.DaemonConfig{
 			SocketPath:  socketPath,

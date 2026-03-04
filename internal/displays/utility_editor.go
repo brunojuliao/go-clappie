@@ -31,7 +31,7 @@ func NewUtilityEditorView(ctx *engine.Context) engine.View {
 		Label:    "Save",
 		Shortcut: "S",
 		OnPress: func() {
-			ctx.Submit("[clappie] Editor → " + textarea.Value())
+			ctx.Submit("[go-clappie] Editor → " + textarea.Value())
 			ctx.Pop()
 		},
 		Style: uikit.ButtonStyleFilled,

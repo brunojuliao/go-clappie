@@ -71,7 +71,7 @@ func NewUtilityListView(ctx *engine.Context) engine.View {
 				return true
 			case "ENTER":
 				if selectedIdx < len(options) {
-					ctx.Submit(fmt.Sprintf("[clappie] List → %s", options[selectedIdx]))
+					ctx.Submit(fmt.Sprintf("[go-clappie] List → %s", options[selectedIdx]))
 					ctx.Pop()
 				}
 				return true

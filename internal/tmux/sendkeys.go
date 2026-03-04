@@ -23,7 +23,7 @@ func SendKeys(paneID string, text string, enter bool) error {
 // This avoids tmux's send-keys escaping issues for long/complex text.
 func SendKeysLiteral(paneID string, text string) error {
 	// Write to temp file, load into tmux buffer, paste
-	f, err := os.CreateTemp("", "clappie-sendkeys-*")
+	f, err := os.CreateTemp("", "go-clappie-sendkeys-*")
 	if err != nil {
 		return err
 	}
@@ -52,10 +52,10 @@ func escapeSendKeys(s string) string {
 	return s
 }
 
-// SubmitToClaudePane sends a [clappie] message to Claude's pane and presses Enter.
+// SubmitToClaudePane sends a [go-clappie] message to Claude's pane and presses Enter.
 func SubmitToClaudePane(claudePaneID string, message string) error {
 	if claudePaneID == "" {
-		claudePaneID = os.Getenv("CLAPPIE_CLAUDE_PANE")
+		claudePaneID = os.Getenv("GO_CLAPPIE_CLAUDE_PANE")
 	}
 	if claudePaneID == "" {
 		return nil // No claude pane configured
@@ -63,10 +63,10 @@ func SubmitToClaudePane(claudePaneID string, message string) error {
 	return SendKeysLiteral(claudePaneID, message+"\n")
 }
 
-// SendToClaudePane sends a [clappie] message to Claude's pane without pressing Enter.
+// SendToClaudePane sends a [go-clappie] message to Claude's pane without pressing Enter.
 func SendToClaudePane(claudePaneID string, message string) error {
 	if claudePaneID == "" {
-		claudePaneID = os.Getenv("CLAPPIE_CLAUDE_PANE")
+		claudePaneID = os.Getenv("GO_CLAPPIE_CLAUDE_PANE")
 	}
 	if claudePaneID == "" {
 		return nil
