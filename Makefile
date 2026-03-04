@@ -1,6 +1,6 @@
 .PHONY: build build-all clean test install
 
-BINARY = clappie
+BINARY = go-clappie
 MODULE = github.com/brunojuliao/go-clappie
 
 build:

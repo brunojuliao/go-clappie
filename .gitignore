@@ -6,7 +6,7 @@
 *.dylib
 
 # Project binary
-clappie
+go-clappie
 
 # Build output
 dist/

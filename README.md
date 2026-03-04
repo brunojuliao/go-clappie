@@ -44,7 +44,7 @@ Go-Clappie is a complete rewrite of the original JavaScript/Bun-based Clappie fr
 ```bash
 git clone https://github.com/brunojuliao/go-clappie.git
 cd go-clappie
-go build -o clappie .
+go build -o go-clappie .
 ```
 
 Or install directly:
@@ -76,11 +76,13 @@ This produces binaries in `dist/`:
 
 | Target | File | OS | Architecture |
 |--------|------|----|-------------|
-| Linux x86_64 | `clappie-linux-amd64` | Linux | amd64 |
-| Linux ARM | `clappie-linux-arm64` | Linux | arm64 |
-| macOS Intel | `clappie-darwin-amd64` | macOS | amd64 |
-| macOS Apple Silicon | `clappie-darwin-arm64` | macOS | arm64 |
-| Windows | `clappie-windows-amd64.exe` | Windows | amd64 |
+| Linux x86_64 | `go-clappie-linux-amd64` | Linux | amd64 |
+| Linux ARM | `go-clappie-linux-arm64` | Linux | arm64 |
+| macOS Intel | `go-clappie-darwin-amd64` | macOS | amd64 |
+| macOS Apple Silicon | `go-clappie-darwin-arm64` | macOS | arm64 |
+| Windows | `go-clappie-windows-amd64.exe` | Windows | amd64 |
+
+Rename the binary for your platform to `go-clappie` (or `go-clappie.exe` on Windows) and place it somewhere in your `PATH`.
 
 ### Other Commands
 
@@ -119,7 +121,7 @@ brew install tmux
 
 ### Windows
 
-Clappie on Windows requires **Git for Windows** (Git Bash) with **tmux** installed manually. tmux is not included with Git Bash by default.
+Go-Clappie on Windows requires **Git for Windows** (Git Bash) with **tmux** installed manually. tmux is not included with Git Bash by default.
 
 #### Option A: Via MSYS2 (Recommended)
 
@@ -158,35 +160,35 @@ Clappie on Windows requires **Git for Windows** (Git Bash) with **tmux** install
 
 ## Usage
 
-Clappie runs inside a tmux session. Basic commands:
+Go-Clappie runs inside a tmux session. Basic commands:
 
 ```bash
 # Display management
-clappie display push heartbeat       # Open the heartbeat dashboard
-clappie display push chores          # Open the chore approval queue
-clappie display pop                  # Close current view
-clappie display list                 # List open displays
+go-clappie display push heartbeat       # Open the heartbeat dashboard
+go-clappie display push chores          # Open the chore approval queue
+go-clappie display pop                  # Close current view
+go-clappie display list                 # List open displays
 
 # Background apps
-clappie background start <app>       # Start a background app
-clappie background list              # List running apps
+go-clappie background start <app>       # Start a background app
+go-clappie background list              # List running apps
 
 # Sidekicks
-clappie sidekick spawn <name>        # Spawn an autonomous Claude session
-clappie sidekick list                # List active sidekicks
+go-clappie sidekick spawn <name>        # Spawn an autonomous Claude session
+go-clappie sidekick list                # List active sidekicks
 
 # Parties (AI simulations)
-clappie parties init <game>          # Initialize a game
-clappie parties roll 2d6+3           # Roll dice
+go-clappie parties init <game>          # Initialize a game
+go-clappie parties roll 2d6+3           # Roll dice
 
 # OAuth
-clappie oauth auth <provider>        # Start OAuth flow
-clappie oauth status                 # Show token status
+go-clappie oauth auth <provider>        # Start OAuth flow
+go-clappie oauth status                 # Show token status
 
 # General
-clappie list displays                # List all 15 built-in views
-clappie list skills                  # List discovered skills
-clappie --help                       # Full command reference
+go-clappie list displays                # List all 15 built-in views
+go-clappie list skills                  # List discovered skills
+go-clappie --help                       # Full command reference
 ```
 
 ## Project Structure
@@ -242,7 +244,7 @@ Test suites cover: filestore meta parsing, IPC round-trip, keyboard parsing, ANS
 
 ### Display Daemon
 
-The CLI spawns itself as a daemon process (`clappie __daemon`). The daemon:
+The CLI spawns itself as a daemon process (`go-clappie __daemon`). The daemon:
 1. Sets stdin to raw mode
 2. Enables mouse tracking (SGR mode)
 3. Runs an IPC server on a goroutine
