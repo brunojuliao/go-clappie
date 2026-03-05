@@ -3,6 +3,7 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -127,8 +128,13 @@ func (a *AppModel) Init() tea.Cmd {
 func (a *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
+		log.Printf("WindowSizeMsg: %dx%d", msg.Width, msg.Height)
 		a.width = msg.Width
 		a.height = msg.Height
+		// Forward to current view (needed by viewport-based views like utility/viewer)
+		if len(a.viewStack) > 0 {
+			return a.updateCurrentView(msg)
+		}
 		return a, nil
 
 	case tea.KeyMsg:
@@ -210,8 +216,13 @@ func (a *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View implements tea.Model.
 func (a *AppModel) View() string {
-	if a.width == 0 || a.height == 0 {
-		return ""
+	// Use fallback dimensions if WindowSizeMsg hasn't arrived yet
+	// (common on Windows/MSYS2/MinTTY where terminal size queries may fail).
+	if a.width == 0 {
+		a.width = 80
+	}
+	if a.height == 0 {
+		a.height = 24
 	}
 
 	var sections []string
@@ -317,9 +328,21 @@ func (a *AppModel) pushView(name string, data map[string]interface{}) (tea.Model
 
 	screen := module.Create(data, a.styles, a.config.ClaudePane)
 	a.viewStack = append(a.viewStack, screen)
+	log.Printf("pushView: %s (stack size: %d)", name, len(a.viewStack))
 
-	cmd := screen.Init()
-	return a, cmd
+	initCmd := screen.Init()
+
+	// Send current dimensions to the new view so viewport-based views
+	// (like utility/viewer) can initialize even if WindowSizeMsg already fired.
+	var sizeCmd tea.Cmd
+	if a.width > 0 && a.height > 0 {
+		idx := len(a.viewStack) - 1
+		updated, cmd := a.viewStack[idx].Update(tea.WindowSizeMsg{Width: a.width, Height: a.height})
+		a.viewStack[idx] = updated.(ScreenModel)
+		sizeCmd = cmd
+	}
+
+	return a, tea.Batch(initCmd, sizeCmd)
 }
 
 // popView removes the top view from the stack.
@@ -364,6 +387,7 @@ func (a *AppModel) handleIPCMsg(msg IPCCommandMsg) (tea.Model, tea.Cmd) {
 			duration = 3000
 		}
 		a.toast = cmd.Message
+		log.Printf("toast: %q (duration=%dms)", cmd.Message, duration)
 		teaCmd = tea.Tick(time.Duration(duration)*time.Millisecond, func(time.Time) tea.Msg {
 			return ToastExpiredMsg{}
 		})

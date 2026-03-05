@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -47,6 +48,14 @@ var daemonCmd = &cobra.Command{
 			claudePane = os.Getenv("GO_CLAPPIE_CLAUDE_PANE")
 		}
 
+		// Log to file for debugging (stderr may not be visible in tmux pane).
+		logFile, err := os.CreateTemp("", "go-clappie-daemon-*.log")
+		if err == nil {
+			log.SetOutput(logFile)
+			defer logFile.Close()
+			log.Printf("daemon starting: socket=%s view=%s claude=%s", socketPath, initialView, claudePane)
+		}
+
 		app := engine.NewApp(engine.AppConfig{
 			SocketPath:  socketPath,
 			InitialView: initialView,
@@ -59,11 +68,18 @@ var daemonCmd = &cobra.Command{
 		app.SetProgram(p)
 
 		if err := app.StartIPCServer(); err != nil {
+			log.Printf("IPC server failed: %v", err)
 			return fmt.Errorf("start IPC server: %w", err)
 		}
 		defer app.Shutdown()
 
-		_, err := p.Run()
+		log.Printf("starting bubbletea program")
+		_, err = p.Run()
+		if err != nil {
+			log.Printf("bubbletea exited with error: %v", err)
+		} else {
+			log.Printf("bubbletea exited cleanly")
+		}
 		return err
 	},
 }

@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -172,8 +173,18 @@ func startDaemon(initialView string, initialData json.RawMessage) error {
 	// can't resolve. Using filepath.Base + flags avoids both issues.
 	binary := filepath.Base(os.Args[0])
 
-	daemonCmd := fmt.Sprintf("%s __daemon --socket %q --view %s --claude-pane %s",
-		binary, socketPath, initialView, claudePane)
+	// On Windows/MSYS2, wrap with winpty if available.
+	// Native Windows binaries can't interact with MSYS2 PTYs directly —
+	// winpty bridges the PTY to a real Windows console for bubbletea.
+	prefix := ""
+	if runtime.GOOS == "windows" && os.Getenv("MSYSTEM") != "" {
+		if _, err := exec.LookPath("winpty"); err == nil {
+			prefix = "winpty "
+		}
+	}
+
+	daemonCmd := fmt.Sprintf("%s%s __daemon --socket %q --view %s --claude-pane %s",
+		prefix, binary, socketPath, initialView, claudePane)
 	if initialData != nil {
 		daemonCmd += fmt.Sprintf(" --data %q", string(initialData))
 	}

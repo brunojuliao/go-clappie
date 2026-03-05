@@ -19,7 +19,7 @@ Go-Clappie is a complete rewrite of the original JavaScript/Bun-based Clappie fr
 
 | Subsystem | Description |
 |-----------|-------------|
-| **Display Engine** | Raw terminal TUI with view stack, keyboard/mouse input, themes |
+| **Display Engine** | Bubbletea-powered TUI with view stack, keyboard/mouse input, themes |
 | **UI Kit** | 14 components: buttons, toggles, text inputs, textareas, checkboxes, radios, selects, progress bars, loaders, labels, dividers, alerts |
 | **Chores** | Human approval queue for AI-proposed actions |
 | **Notifications** | Bidirectional sync pipeline with aggressive TLDR |
@@ -202,7 +202,7 @@ go-clappie/
     platform/                 # Cross-platform abstractions (IPC, paths, tmux)
     ipc/                      # JSON command/response protocol over sockets
     tmux/                     # tmux session/pane/sendkeys operations
-    engine/                   # Display engine daemon (view stack, renderer, theme)
+    engine/                   # Display engine daemon (bubbletea app, view stack, styles, theme)
     uikit/                    # 14 UI components
     graphics/                 # Quarter-block pixel art and animations
     filestore/                # File-based state with [meta] block format
@@ -222,8 +222,10 @@ go-clappie/
 | Package | Purpose |
 |---------|---------|
 | [github.com/spf13/cobra](https://github.com/spf13/cobra) | CLI framework |
+| [github.com/charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea) | TUI framework (Elm architecture) |
+| [github.com/charmbracelet/lipgloss](https://github.com/charmbracelet/lipgloss) | Terminal styling and layout |
+| [github.com/charmbracelet/bubbles](https://github.com/charmbracelet/bubbles) | TUI components (text input, viewport, spinner) |
 | [github.com/mattn/go-runewidth](https://github.com/mattn/go-runewidth) | Visual width calculation (emoji, CJK) |
-| [golang.org/x/term](https://pkg.go.dev/golang.org/x/term) | Raw terminal mode, size detection |
 
 Everything else uses the Go standard library.
 
@@ -233,7 +235,7 @@ Everything else uses the Go standard library.
 go test ./...
 ```
 
-Test suites cover: filestore meta parsing, IPC round-trip, keyboard parsing, ANSI width calculation, dice rolling, heartbeat scheduling, and file CRUD operations.
+Test suites cover: filestore meta parsing, IPC round-trip, ANSI width calculation, dice rolling, heartbeat scheduling, and file CRUD operations.
 
 ## Architecture
 
@@ -245,10 +247,10 @@ Test suites cover: filestore meta parsing, IPC round-trip, keyboard parsing, ANS
 ### Display Daemon
 
 The CLI spawns itself as a daemon process (`go-clappie __daemon`). The daemon:
-1. Sets stdin to raw mode
-2. Enables mouse tracking (SGR mode)
-3. Runs an IPC server on a goroutine
-4. Main loop: select over stdin events, IPC commands, signals, and timers
+1. Creates a bubbletea `Program` with alt-screen and mouse support
+2. Runs an IPC server on a goroutine
+3. Bubbletea manages the event loop (keyboard, mouse, window resize, custom messages)
+4. IPC mutations are thread-safe via `program.Send()` into the Elm update cycle
 
 ### File Format
 
@@ -266,7 +268,7 @@ created: 2025-03-03 14:30
 
 ### Import Cycle Resolution
 
-The `engine` package cannot import `displays` (circular dependency). Solution: the view registry is injected via `DaemonConfig.Registry` at startup from `cmd/daemon.go`.
+The `engine` package cannot import `displays` (circular dependency). Solution: the view registry is injected via `AppConfig.Registry` at startup from `cmd/daemon.go`.
 
 ## Credits
 
