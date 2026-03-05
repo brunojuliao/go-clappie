@@ -2,27 +2,31 @@ package displays
 
 import (
 	"fmt"
+	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/brunojuliao/go-clappie/internal/engine"
-	"github.com/brunojuliao/go-clappie/internal/uikit"
 )
 
-// NewUtilityListView creates the utility list picker view.
-func NewUtilityListView(ctx *engine.Context) engine.View {
-	view := uikit.NewView(ctx)
+type utilityListScreen struct {
+	title       string
+	options     []string
+	selectedIdx int
+	styles      *engine.Styles
+}
 
+func NewUtilityListScreen(data map[string]interface{}, styles *engine.Styles, claudePane string) engine.ScreenModel {
 	title := "Select"
-	if ctx.Data != nil {
-		if t, ok := ctx.Data["title"].(string); ok {
+	if data != nil {
+		if t, ok := data["title"].(string); ok {
 			title = t
 		}
 	}
-
-	ctx.SetTitle(title)
-
 	var options []string
-	if ctx.Data != nil {
-		if opts, ok := ctx.Data["options"].([]interface{}); ok {
+	if data != nil {
+		if opts, ok := data["options"].([]interface{}); ok {
 			for _, o := range opts {
 				if s, ok := o.(string); ok {
 					options = append(options, s)
@@ -30,53 +34,53 @@ func NewUtilityListView(ctx *engine.Context) engine.View {
 			}
 		}
 	}
-
-	selectedIdx := 0
-
-	render := func() {
-		var lines []string
-		lines = append(lines, "")
-
-		for i, opt := range options {
-			prefix := "  "
-			if i == selectedIdx {
-				prefix = "▸ "
-			}
-			line := fmt.Sprintf("%s%s", prefix, opt)
-			if i == selectedIdx {
-				line = engine.StyleBold(line)
-			}
-			lines = append(lines, line)
-		}
-
-		ctx.Draw(lines)
-	}
-
-	return engine.View{
-		Init:   render,
-		Render: render,
-		OnKey: func(key string) bool {
-			switch key {
-			case "UP", "k":
-				if selectedIdx > 0 {
-					selectedIdx--
-					render()
-				}
-				return true
-			case "DOWN", "j":
-				if selectedIdx < len(options)-1 {
-					selectedIdx++
-					render()
-				}
-				return true
-			case "ENTER":
-				if selectedIdx < len(options) {
-					ctx.Submit(fmt.Sprintf("[go-clappie] List → %s", options[selectedIdx]))
-					ctx.Pop()
-				}
-				return true
-			}
-			return view.HandleKey(key)
-		},
-	}
+	return &utilityListScreen{title: title, options: options, styles: styles}
 }
+
+func (m *utilityListScreen) Init() tea.Cmd { return nil }
+
+func (m *utilityListScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		switch keyMsg.String() {
+		case "up", "k":
+			if m.selectedIdx > 0 {
+				m.selectedIdx--
+			}
+		case "down", "j":
+			if m.selectedIdx < len(m.options)-1 {
+				m.selectedIdx++
+			}
+		case "enter":
+			if m.selectedIdx < len(m.options) {
+				return m, tea.Batch(
+					engine.SubmitToClaudeCmd(fmt.Sprintf("[go-clappie] List → %s", m.options[m.selectedIdx])),
+					engine.PopViewCmd(),
+				)
+			}
+		}
+	}
+	return m, nil
+}
+
+func (m *utilityListScreen) View() string {
+	bold := lipgloss.NewStyle().Bold(true)
+
+	var lines []string
+	lines = append(lines, "")
+	for i, opt := range m.options {
+		prefix := "  "
+		if i == m.selectedIdx {
+			prefix = "▸ "
+		}
+		line := fmt.Sprintf("%s%s", prefix, opt)
+		if i == m.selectedIdx {
+			line = bold.Render(line)
+		}
+		lines = append(lines, line)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (m *utilityListScreen) Name() string                        { return m.title }
+func (m *utilityListScreen) Layout() (string, int)               { return "centered", 50 }
+func (m *utilityListScreen) Shortcuts() []engine.ShortcutHint { return nil }

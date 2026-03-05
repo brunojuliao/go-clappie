@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/brunojuliao/go-clappie/internal/engine"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // ButtonStyle represents different button visual styles.
@@ -22,55 +23,54 @@ const (
 type ButtonConfig struct {
 	Label    string
 	Shortcut string
-	OnPress  func()
+	OnPress  func() tea.Cmd
 	Style    ButtonStyle
 	Width    int
 }
 
 // Button is a clickable button component.
 type Button struct {
-	ComponentBase
-	config ButtonConfig
+	config  ButtonConfig
+	focused bool
+	width   int
 }
 
 // NewButton creates a new button.
-func NewButton(cfg ButtonConfig) *Button {
+func NewButton(cfg ButtonConfig) Button {
 	w := cfg.Width
 	if w == 0 {
-		w = engine.VisualWidth(cfg.Label) + 6
+		w = len(cfg.Label) + 6
 	}
-	return &Button{
-		ComponentBase: ComponentBase{Focusable: true, Width: w},
-		config:        cfg,
-	}
+	return Button{config: cfg, width: w}
 }
 
 // NewButtonFilled creates a filled-style button.
-func NewButtonFilled(cfg ButtonConfig) *Button {
+func NewButtonFilled(cfg ButtonConfig) Button {
 	cfg.Style = ButtonStyleFilled
 	return NewButton(cfg)
 }
 
 // NewButtonGhost creates a ghost-style button.
-func NewButtonGhost(cfg ButtonConfig) *Button {
+func NewButtonGhost(cfg ButtonConfig) Button {
 	cfg.Style = ButtonStyleGhost
 	return NewButton(cfg)
 }
 
-// NewButtonInline creates an inline-style button.
-func NewButtonInline(cfg ButtonConfig) *Button {
-	cfg.Style = ButtonStyleInline
-	return NewButton(cfg)
+func (b Button) Init() tea.Cmd { return nil }
+
+func (b Button) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		switch keyMsg.String() {
+		case "enter", " ":
+			if b.config.OnPress != nil {
+				return b, b.config.OnPress()
+			}
+		}
+	}
+	return b, nil
 }
 
-// NewButtonFullWidth creates a full-width button.
-func NewButtonFullWidth(cfg ButtonConfig) *Button {
-	cfg.Style = ButtonStyleFullWidth
-	return NewButton(cfg)
-}
-
-// Render renders the button.
-func (b *Button) Render(focused bool) []string {
+func (b Button) View() string {
 	label := b.config.Label
 	if b.config.Shortcut != "" {
 		label = fmt.Sprintf("[%s] %s", b.config.Shortcut, label)
@@ -78,87 +78,76 @@ func (b *Button) Render(focused bool) []string {
 
 	switch b.config.Style {
 	case ButtonStyleFilled:
-		return b.renderFilled(label, focused)
+		return b.viewFilled(label)
 	case ButtonStyleGhost:
-		return b.renderGhost(label, focused)
+		return b.viewGhost(label)
 	case ButtonStyleInline:
-		return b.renderInline(label, focused)
+		return b.viewInline(label)
 	case ButtonStyleFullWidth:
-		return b.renderFullWidth(label, focused)
+		return b.viewFullWidth(label)
 	default:
-		return b.renderDefault(label, focused)
+		return b.viewDefault(label)
 	}
 }
 
-func (b *Button) renderDefault(label string, focused bool) []string {
-	w := b.GetWidth()
-	padded := engine.PadCenter(label, w-2)
+func (b Button) viewDefault(label string) string {
+	w := b.width
+	inner := w - 2
+	padded := lipgloss.PlaceHorizontal(inner, lipgloss.Center, label)
 
-	if focused {
-		top := "┌" + strings.Repeat("─", w-2) + "┐"
-		mid := "│" + engine.StyleBold(padded) + "│"
-		bot := "└" + strings.Repeat("─", w-2) + "┘"
-		return []string{top, mid, bot}
+	border := lipgloss.NormalBorder()
+	style := lipgloss.NewStyle().
+		Border(border).
+		Width(inner)
+
+	if b.focused {
+		style = style.Bold(true).BorderForeground(lipgloss.Color("15"))
 	}
-
-	top := "┌" + strings.Repeat("─", w-2) + "┐"
-	mid := "│" + padded + "│"
-	bot := "└" + strings.Repeat("─", w-2) + "┘"
-	return []string{top, mid, bot}
+	return style.Render(padded)
 }
 
-func (b *Button) renderFilled(label string, focused bool) []string {
-	w := b.GetWidth()
-	padded := engine.PadCenter(label, w)
-	if focused {
-		return []string{engine.StyleInverse(engine.StyleBold(padded))}
+func (b Button) viewFilled(label string) string {
+	style := lipgloss.NewStyle().
+		Reverse(true).
+		Padding(0, 1)
+	if b.focused {
+		style = style.Bold(true)
 	}
-	return []string{engine.StyleInverse(padded)}
+	return style.Render(label)
 }
 
-func (b *Button) renderGhost(label string, focused bool) []string {
-	if focused {
-		return []string{engine.StyleBold("  " + label + "  ")}
+func (b Button) viewGhost(label string) string {
+	if b.focused {
+		return lipgloss.NewStyle().Bold(true).Padding(0, 1).Render(label)
 	}
-	return []string{engine.StyleDim("  " + label + "  ")}
+	return lipgloss.NewStyle().Faint(true).Padding(0, 1).Render(label)
 }
 
-func (b *Button) renderInline(label string, focused bool) []string {
-	if focused {
-		return []string{engine.StyleUnderline(label)}
+func (b Button) viewInline(label string) string {
+	if b.focused {
+		return lipgloss.NewStyle().Underline(true).Render(label)
 	}
-	return []string{label}
+	return label
 }
 
-func (b *Button) renderFullWidth(label string, focused bool) []string {
-	w := b.GetWidth()
-	padded := engine.PadRight("  "+label, w)
-	if focused {
-		return []string{engine.StyleInverse(engine.StyleBold(padded))}
+func (b Button) viewFullWidth(label string) string {
+	padded := "  " + label + strings.Repeat(" ", max(0, b.width-len(label)-2))
+	style := lipgloss.NewStyle().Reverse(true)
+	if b.focused {
+		style = style.Bold(true)
 	}
-	return []string{engine.StyleInverse(padded)}
+	return style.Render(padded)
 }
 
-// OnKey handles key events for the button.
-func (b *Button) OnKey(key string) bool {
-	if key == "ENTER" || key == "SPACE" {
-		if b.config.OnPress != nil {
-			b.config.OnPress()
-		}
-		return true
-	}
-	return false
+func (b Button) IsFocusable() bool { return true }
+func (b Button) Focused() bool     { return b.focused }
+
+func (b Button) Focus() Component {
+	b.focused = true
+	return b
 }
 
-// OnClick handles click events.
-func (b *Button) OnClick(lineIdx, col int) bool {
-	if b.config.OnPress != nil {
-		b.config.OnPress()
-	}
-	return true
-}
-
-// GetShortcut returns the button's shortcut key.
-func (b *Button) GetShortcut() string {
-	return b.config.Shortcut
+func (b Button) Blur() Component {
+	b.focused = false
+	return b
 }

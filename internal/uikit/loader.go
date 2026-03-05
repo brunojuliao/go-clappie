@@ -2,40 +2,44 @@ package uikit
 
 import (
 	"fmt"
-	"time"
 
-	"github.com/brunojuliao/go-clappie/internal/engine"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/lipgloss"
 )
-
-var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
 // LoaderConfig configures a loader component.
 type LoaderConfig struct {
 	Label string
 }
 
-// Loader is an animated loading spinner component.
+// Loader wraps bubbles/spinner.Model.
 type Loader struct {
-	ComponentBase
-	config LoaderConfig
-	frame  int
+	config  LoaderConfig
+	spinner spinner.Model
 }
 
 // NewLoader creates a new loader.
-func NewLoader(cfg LoaderConfig) *Loader {
-	return &Loader{
-		ComponentBase: ComponentBase{
-			Focusable: false,
-			Width:     engine.VisualWidth(cfg.Label) + 4,
-		},
-		config: cfg,
-	}
+func NewLoader(cfg LoaderConfig) Loader {
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	return Loader{config: cfg, spinner: s}
 }
 
-// Render renders the loader with current animation frame.
-func (l *Loader) Render(focused bool) []string {
-	// Advance frame based on time
-	l.frame = int(time.Now().UnixMilli()/100) % len(spinnerFrames)
-	spinner := spinnerFrames[l.frame]
-	return []string{fmt.Sprintf("  %s %s", spinner, engine.StyleDim(l.config.Label))}
+func (l Loader) Init() tea.Cmd { return l.spinner.Tick }
+
+func (l Loader) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	l.spinner, cmd = l.spinner.Update(msg)
+	return l, cmd
 }
+
+func (l Loader) View() string {
+	label := lipgloss.NewStyle().Faint(true).Render(l.config.Label)
+	return fmt.Sprintf("  %s %s", l.spinner.View(), label)
+}
+
+func (l Loader) IsFocusable() bool { return false }
+func (l Loader) Focused() bool     { return false }
+func (l Loader) Focus() Component  { return l }
+func (l Loader) Blur() Component   { return l }

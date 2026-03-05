@@ -3,7 +3,8 @@ package uikit
 import (
 	"fmt"
 
-	"github.com/brunojuliao/go-clappie/internal/engine"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // RadioConfig configures a radio component.
@@ -11,40 +12,52 @@ type RadioConfig struct {
 	Label    string
 	Options  []string
 	Selected int
-	OnChange func(int, string)
+	OnChange func(int, string) tea.Cmd
 }
 
 // Radio is a single-select radio group component.
 type Radio struct {
-	ComponentBase
 	config   RadioConfig
 	selected int
+	focused  bool
 }
 
 // NewRadio creates a new radio group.
-func NewRadio(cfg RadioConfig) *Radio {
-	maxWidth := engine.VisualWidth(cfg.Label) + 4
-	for _, opt := range cfg.Options {
-		w := engine.VisualWidth(opt) + 6
-		if w > maxWidth {
-			maxWidth = w
-		}
-	}
-	return &Radio{
-		ComponentBase: ComponentBase{Focusable: true, Width: maxWidth},
-		config:        cfg,
-		selected:      cfg.Selected,
-	}
+func NewRadio(cfg RadioConfig) Radio {
+	return Radio{config: cfg, selected: cfg.Selected}
 }
 
-// Render renders the radio group.
-func (r *Radio) Render(focused bool) []string {
+func (r Radio) Init() tea.Cmd { return nil }
+
+func (r Radio) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		switch keyMsg.String() {
+		case "up", "k":
+			if r.selected > 0 {
+				r.selected--
+				return r, r.notifyChange()
+			}
+			return r, nil
+		case "down", "j":
+			if r.selected < len(r.config.Options)-1 {
+				r.selected++
+				return r, r.notifyChange()
+			}
+			return r, nil
+		case "enter", " ":
+			return r, r.notifyChange()
+		}
+	}
+	return r, nil
+}
+
+func (r Radio) View() string {
 	var lines []string
 
 	if r.config.Label != "" {
 		label := r.config.Label
-		if focused {
-			label = engine.StyleBold(label)
+		if r.focused {
+			label = lipgloss.NewStyle().Bold(true).Render(label)
 		}
 		lines = append(lines, "  "+label)
 	}
@@ -55,65 +68,40 @@ func (r *Radio) Render(focused bool) []string {
 			icon = "●"
 		}
 		line := fmt.Sprintf("    %s %s", icon, opt)
-		if focused && i == r.selected {
-			line = engine.StyleBold(line)
+		if r.focused && i == r.selected {
+			line = lipgloss.NewStyle().Bold(true).Render(line)
 		}
 		lines = append(lines, line)
 	}
 
-	return lines
+	return joinLines(lines)
 }
 
-// OnKey handles key events.
-func (r *Radio) OnKey(key string) bool {
-	switch key {
-	case "UP":
-		if r.selected > 0 {
-			r.selected--
-			r.notifyChange()
-		}
-		return true
-	case "DOWN":
-		if r.selected < len(r.config.Options)-1 {
-			r.selected++
-			r.notifyChange()
-		}
-		return true
-	case "ENTER", "SPACE":
-		r.notifyChange()
-		return true
-	}
-	return false
-}
-
-// OnClick handles click events.
-func (r *Radio) OnClick(lineIdx, col int) bool {
-	// Adjust for label line
-	optIdx := lineIdx
-	if r.config.Label != "" {
-		optIdx--
-	}
-	if optIdx >= 0 && optIdx < len(r.config.Options) {
-		r.selected = optIdx
-		r.notifyChange()
-		return true
-	}
-	return false
-}
-
-func (r *Radio) notifyChange() {
+func (r Radio) notifyChange() tea.Cmd {
 	if r.config.OnChange != nil && r.selected < len(r.config.Options) {
-		r.config.OnChange(r.selected, r.config.Options[r.selected])
+		return r.config.OnChange(r.selected, r.config.Options[r.selected])
 	}
+	return nil
+}
+
+func (r Radio) IsFocusable() bool { return true }
+func (r Radio) Focused() bool     { return r.focused }
+
+func (r Radio) Focus() Component {
+	r.focused = true
+	return r
+}
+
+func (r Radio) Blur() Component {
+	r.focused = false
+	return r
 }
 
 // Selected returns the selected index.
-func (r *Radio) Selected() int {
-	return r.selected
-}
+func (r Radio) Selected() int { return r.selected }
 
 // SelectedOption returns the selected option string.
-func (r *Radio) SelectedOption() string {
+func (r Radio) SelectedOption() string {
 	if r.selected < len(r.config.Options) {
 		return r.config.Options[r.selected]
 	}

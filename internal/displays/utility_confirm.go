@@ -1,55 +1,63 @@
 package displays
 
 import (
+	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/brunojuliao/go-clappie/internal/engine"
-	"github.com/brunojuliao/go-clappie/internal/uikit"
 )
 
-// NewUtilityConfirmView creates the utility confirm dialog view.
-func NewUtilityConfirmView(ctx *engine.Context) engine.View {
-	view := uikit.NewView(ctx)
+type utilityConfirmScreen struct {
+	message string
+	styles  *engine.Styles
+}
 
+func NewUtilityConfirmScreen(data map[string]interface{}, styles *engine.Styles, claudePane string) engine.ScreenModel {
 	message := "Are you sure?"
-	if ctx.Data != nil {
-		if m, ok := ctx.Data["message"].(string); ok {
+	if data != nil {
+		if m, ok := data["message"].(string); ok {
 			message = m
 		}
 	}
+	return &utilityConfirmScreen{message: message, styles: styles}
+}
 
-	ctx.SetTitle("Confirm")
+func (m *utilityConfirmScreen) Init() tea.Cmd { return nil }
 
-	render := func() {
-		lines := []string{
-			"",
-			"  " + message,
-			"",
+func (m *utilityConfirmScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		switch keyMsg.String() {
+		case "y", "Y":
+			return m, tea.Batch(
+				engine.SubmitToClaudeCmd("[go-clappie] Confirm → yes"),
+				engine.PopViewCmd(),
+			)
+		case "n", "N":
+			return m, tea.Batch(
+				engine.SubmitToClaudeCmd("[go-clappie] Confirm → no"),
+				engine.PopViewCmd(),
+			)
 		}
-		ctx.Draw(lines)
 	}
+	return m, nil
+}
 
-	view.Add(uikit.NewButton(uikit.ButtonConfig{
-		Label:    "Yes",
-		Shortcut: "Y",
-		OnPress: func() {
-			ctx.Submit("[go-clappie] Confirm → yes")
-			ctx.Pop()
-		},
-	}))
+func (m *utilityConfirmScreen) View() string {
+	lines := []string{
+		"",
+		"  " + m.message,
+		"",
+		"  [Y] Yes    [N] No",
+	}
+	return strings.Join(lines, "\n")
+}
 
-	view.Add(uikit.NewButton(uikit.ButtonConfig{
-		Label:    "No",
-		Shortcut: "N",
-		OnPress: func() {
-			ctx.Submit("[go-clappie] Confirm → no")
-			ctx.Pop()
-		},
-	}))
-
-	return engine.View{
-		Init:   render,
-		Render: render,
-		OnKey: func(key string) bool {
-			return view.HandleKey(key)
-		},
+func (m *utilityConfirmScreen) Name() string          { return "Confirm" }
+func (m *utilityConfirmScreen) Layout() (string, int) { return "centered", 50 }
+func (m *utilityConfirmScreen) Shortcuts() []engine.ShortcutHint {
+	return []engine.ShortcutHint{
+		{Key: "Y", Label: "Yes"},
+		{Key: "N", Label: "No"},
 	}
 }

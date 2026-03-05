@@ -3,76 +3,72 @@ package uikit
 import (
 	"fmt"
 
-	"github.com/brunojuliao/go-clappie/internal/engine"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // CheckboxConfig configures a checkbox component.
 type CheckboxConfig struct {
 	Label    string
 	Checked  bool
-	OnChange func(bool)
+	OnChange func(bool) tea.Cmd
 }
 
 // Checkbox is a boolean checkbox component.
 type Checkbox struct {
-	ComponentBase
 	config  CheckboxConfig
 	checked bool
+	focused bool
 }
 
 // NewCheckbox creates a new checkbox.
-func NewCheckbox(cfg CheckboxConfig) *Checkbox {
-	return &Checkbox{
-		ComponentBase: ComponentBase{
-			Focusable: true,
-			Width:     engine.VisualWidth(cfg.Label) + 6,
-		},
-		config:  cfg,
-		checked: cfg.Checked,
-	}
+func NewCheckbox(cfg CheckboxConfig) Checkbox {
+	return Checkbox{config: cfg, checked: cfg.Checked}
 }
 
-// Render renders the checkbox.
-func (c *Checkbox) Render(focused bool) []string {
+func (c Checkbox) Init() tea.Cmd { return nil }
+
+func (c Checkbox) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		switch keyMsg.String() {
+		case "enter", " ":
+			c.checked = !c.checked
+			if c.config.OnChange != nil {
+				return c, c.config.OnChange(c.checked)
+			}
+			return c, nil
+		}
+	}
+	return c, nil
+}
+
+func (c Checkbox) View() string {
 	icon := "☐"
 	if c.checked {
 		icon = "☑"
 	}
-
 	line := fmt.Sprintf("  %s %s", icon, c.config.Label)
-	if focused {
-		line = engine.StyleBold(line)
+	if c.focused {
+		return lipgloss.NewStyle().Bold(true).Render(line)
 	}
-	return []string{line}
+	return line
 }
 
-// OnKey handles key events.
-func (c *Checkbox) OnKey(key string) bool {
-	if key == "ENTER" || key == "SPACE" {
-		c.checked = !c.checked
-		if c.config.OnChange != nil {
-			c.config.OnChange(c.checked)
-		}
-		return true
-	}
-	return false
+func (c Checkbox) IsFocusable() bool { return true }
+func (c Checkbox) Focused() bool     { return c.focused }
+
+func (c Checkbox) Focus() Component {
+	c.focused = true
+	return c
 }
 
-// OnClick handles click events.
-func (c *Checkbox) OnClick(lineIdx, col int) bool {
-	c.checked = !c.checked
-	if c.config.OnChange != nil {
-		c.config.OnChange(c.checked)
-	}
-	return true
+func (c Checkbox) Blur() Component {
+	c.focused = false
+	return c
 }
 
 // Checked returns the current state.
-func (c *Checkbox) Checked() bool {
-	return c.checked
-}
+func (c Checkbox) Checked() bool { return c.checked }
 
 // SetChecked sets the checkbox state.
-func (c *Checkbox) SetChecked(v bool) {
-	c.checked = v
-}
+func (c *Checkbox) SetChecked(v bool) { c.checked = v }

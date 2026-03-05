@@ -1,6 +1,10 @@
 package uikit
 
-import "strings"
+import (
+	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+)
 
 // DividerVariant represents the divider style.
 type DividerVariant int
@@ -21,39 +25,43 @@ type DividerConfig struct {
 
 // Divider is a horizontal line separator component.
 type Divider struct {
-	ComponentBase
 	config DividerConfig
+	width  int
 }
 
 // NewDivider creates a new divider.
-func NewDivider(cfg DividerConfig) *Divider {
+func NewDivider(cfg DividerConfig) Divider {
 	w := cfg.Width
 	if w == 0 {
 		w = 40
 	}
-	return &Divider{
-		ComponentBase: ComponentBase{Focusable: false, Width: w},
-		config:        cfg,
-	}
+	return Divider{config: cfg, width: w}
 }
 
-// Render renders the divider.
-func (d *Divider) Render(focused bool) []string {
-	w := d.GetWidth() - 4 // padding
+func (d Divider) Init() tea.Cmd                         { return nil }
+func (d Divider) Update(msg tea.Msg) (tea.Model, tea.Cmd) { return d, nil }
 
-	var char string
+func (d Divider) View() string {
+	w := d.width - 4
+
+	var ch string
 	switch d.config.Variant {
 	case DividerThick:
-		char = "━"
+		ch = "━"
 	case DividerDashed:
-		char = "╌"
+		ch = "╌"
 	case DividerDotted:
-		char = "·"
+		ch = "·"
 	case DividerSpace:
-		return []string{""}
+		return ""
 	default:
-		char = "─"
+		ch = "─"
 	}
 
-	return []string{"  " + strings.Repeat(char, w)}
+	return "  " + strings.Repeat(ch, w)
 }
+
+func (d Divider) IsFocusable() bool { return false }
+func (d Divider) Focused() bool     { return false }
+func (d Divider) Focus() Component  { return d }
+func (d Divider) Blur() Component   { return d }

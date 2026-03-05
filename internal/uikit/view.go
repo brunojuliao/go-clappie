@@ -1,156 +1,109 @@
 package uikit
 
 import (
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+
 	"github.com/brunojuliao/go-clappie/internal/engine"
 )
 
-// ShortcutEntry represents a keyboard shortcut in the view.
-type ShortcutEntry struct {
-	Key     string
-	Label   string
-	Handler func()
-}
-
-// View manages a list of components with focus and shortcuts.
-type View struct {
-	ctx        *engine.Context
+// ViewContainer manages a list of components with focus cycling.
+type ViewContainer struct {
 	components []Component
 	focusIndex int
-	shortcuts  map[string]ShortcutEntry
-	width      int
 }
 
-// NewView creates a new view.
-func NewView(ctx *engine.Context) *View {
-	return &View{
-		ctx:        ctx,
+// NewViewContainer creates a new view container.
+func NewViewContainer() ViewContainer {
+	return ViewContainer{
 		focusIndex: -1,
-		shortcuts:  make(map[string]ShortcutEntry),
-		width:      60,
 	}
 }
 
-// Add adds a component to the view.
-func (v *View) Add(c Component) {
-	v.components = append(v.components, c)
+// Add adds a component to the container.
+func (vc *ViewContainer) Add(c Component) {
+	vc.components = append(vc.components, c)
 	// Auto-focus first focusable component
-	if v.focusIndex == -1 && c.IsFocusable() {
-		v.focusIndex = len(v.components) - 1
+	if vc.focusIndex == -1 && c.IsFocusable() {
+		vc.focusIndex = len(vc.components) - 1
+		vc.components[vc.focusIndex] = c.Focus()
 	}
 }
 
-// SetWidth sets the container width.
-func (v *View) SetWidth(w int) {
-	v.width = w
-}
-
-// Render renders all components and returns their combined lines.
-func (v *View) Render() []string {
-	var allLines []string
-	for i, c := range v.components {
-		focused := i == v.focusIndex
-		lines := c.Render(focused)
-		allLines = append(allLines, lines...)
-	}
-	return allLines
-}
-
-// HandleKey routes key events through the view.
-func (v *View) HandleKey(key string) bool {
-	// Tab navigation
-	if key == "TAB" {
-		v.FocusNext()
-		return true
-	}
-	if key == "SHIFT_TAB" {
-		v.FocusPrev()
-		return true
+// Update handles key messages and delegates to focused component.
+func (vc ViewContainer) Update(msg tea.Msg) (ViewContainer, tea.Cmd) {
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		switch keyMsg.String() {
+		case "tab":
+			vc.focusNext()
+			return vc, nil
+		case "shift+tab":
+			vc.focusPrev()
+			return vc, nil
+		}
 	}
 
 	// Forward to focused component
-	if v.focusIndex >= 0 && v.focusIndex < len(v.components) {
-		if v.components[v.focusIndex].OnKey(key) {
-			return true
-		}
+	if vc.focusIndex >= 0 && vc.focusIndex < len(vc.components) {
+		updated, cmd := vc.components[vc.focusIndex].Update(msg)
+		vc.components[vc.focusIndex] = updated.(Component)
+		return vc, cmd
 	}
 
-	// Check shortcuts
-	if sc, ok := v.shortcuts[key]; ok {
-		if sc.Handler != nil {
-			sc.Handler()
-		}
-		return true
-	}
-	// Case-insensitive shortcut match
-	if len(key) == 1 {
-		upper := key
-		if key[0] >= 'a' && key[0] <= 'z' {
-			upper = string(key[0] - 32)
-		}
-		if sc, ok := v.shortcuts[upper]; ok {
-			if sc.Handler != nil {
-				sc.Handler()
-			}
-			return true
-		}
-	}
-
-	return false
+	return vc, nil
 }
 
-// FocusNext moves focus to the next focusable component.
-func (v *View) FocusNext() {
-	if len(v.components) == 0 {
+// View renders all components joined vertically.
+func (vc ViewContainer) View() string {
+	var views []string
+	for _, c := range vc.components {
+		views = append(views, c.View())
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, views...)
+}
+
+func (vc *ViewContainer) focusNext() {
+	if len(vc.components) == 0 {
 		return
 	}
-	start := v.focusIndex + 1
-	for i := 0; i < len(v.components); i++ {
-		idx := (start + i) % len(v.components)
-		if v.components[idx].IsFocusable() {
-			v.focusIndex = idx
+	// Blur current
+	if vc.focusIndex >= 0 && vc.focusIndex < len(vc.components) {
+		vc.components[vc.focusIndex] = vc.components[vc.focusIndex].Blur()
+	}
+	start := vc.focusIndex + 1
+	for i := 0; i < len(vc.components); i++ {
+		idx := (start + i) % len(vc.components)
+		if vc.components[idx].IsFocusable() {
+			vc.focusIndex = idx
+			vc.components[idx] = vc.components[idx].Focus()
 			return
 		}
 	}
 }
 
-// FocusPrev moves focus to the previous focusable component.
-func (v *View) FocusPrev() {
-	if len(v.components) == 0 {
+func (vc *ViewContainer) focusPrev() {
+	if len(vc.components) == 0 {
 		return
 	}
-	start := v.focusIndex - 1
+	// Blur current
+	if vc.focusIndex >= 0 && vc.focusIndex < len(vc.components) {
+		vc.components[vc.focusIndex] = vc.components[vc.focusIndex].Blur()
+	}
+	start := vc.focusIndex - 1
 	if start < 0 {
-		start = len(v.components) - 1
+		start = len(vc.components) - 1
 	}
-	for i := 0; i < len(v.components); i++ {
-		idx := (start - i + len(v.components)) % len(v.components)
-		if v.components[idx].IsFocusable() {
-			v.focusIndex = idx
+	for i := 0; i < len(vc.components); i++ {
+		idx := (start - i + len(vc.components)) % len(vc.components)
+		if vc.components[idx].IsFocusable() {
+			vc.focusIndex = idx
+			vc.components[idx] = vc.components[idx].Focus()
 			return
 		}
 	}
 }
 
-// RegisterShortcut registers a keyboard shortcut.
-func (v *View) RegisterShortcut(key, label string, handler func()) {
-	v.shortcuts[key] = ShortcutEntry{
-		Key:     key,
-		Label:   label,
-		Handler: handler,
-	}
-	// Also register with context for footer display
-	v.ctx.RegisterShortcut(key, label, handler)
-}
-
-// GetShortcuts returns all registered shortcuts.
-func (v *View) GetShortcuts() map[string]ShortcutEntry {
-	return v.shortcuts
-}
-
-// FocusedComponent returns the currently focused component, or nil.
-func (v *View) FocusedComponent() Component {
-	if v.focusIndex >= 0 && v.focusIndex < len(v.components) {
-		return v.components[v.focusIndex]
-	}
+// Shortcuts returns shortcut hints from all shortcut-bearing components.
+func (vc ViewContainer) Shortcuts() []engine.ShortcutHint {
 	return nil
 }

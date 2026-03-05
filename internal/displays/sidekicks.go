@@ -2,98 +2,100 @@ package displays
 
 import (
 	"fmt"
+	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/brunojuliao/go-clappie/internal/engine"
 	"github.com/brunojuliao/go-clappie/internal/platform"
 	"github.com/brunojuliao/go-clappie/internal/sidekicks"
-	"github.com/brunojuliao/go-clappie/internal/uikit"
 )
 
-// NewSidekicksView creates the sidekicks dashboard view.
-func NewSidekicksView(ctx *engine.Context) engine.View {
-	view := uikit.NewView(ctx)
+type sidekicksScreen struct {
+	active      []sidekicks.SidekickInfo
+	selectedIdx int
+	styles      *engine.Styles
+}
 
-	ctx.SetTitle("Sidekicks")
-	ctx.SetDescription("Autonomous agent management")
+func NewSidekicksScreen(data map[string]interface{}, styles *engine.Styles, claudePane string) engine.ScreenModel {
+	m := &sidekicksScreen{styles: styles}
+	m.load()
+	return m
+}
 
-	var activeSidekicks []sidekicks.SidekickInfo
-	selectedIdx := 0
-
-	load := func() {
-		root, err := platform.ProjectRoot()
-		if err != nil {
-			return
-		}
-		activeSidekicks, _ = sidekicks.ListActive(root)
+func (m *sidekicksScreen) load() {
+	root, err := platform.ProjectRoot()
+	if err != nil {
+		return
 	}
+	m.active, _ = sidekicks.ListActive(root)
+}
 
-	render := func() {
-		var lines []string
+func (m *sidekicksScreen) Init() tea.Cmd { return nil }
+
+func (m *sidekicksScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		switch keyMsg.String() {
+		case "up", "k":
+			if m.selectedIdx > 0 {
+				m.selectedIdx--
+			}
+		case "down", "j":
+			if m.selectedIdx < len(m.active)-1 {
+				m.selectedIdx++
+			}
+		case "r", "R":
+			m.load()
+		case "K":
+			if m.selectedIdx < len(m.active) {
+				root, _ := platform.ProjectRoot()
+				sidekicks.End(root)
+				m.load()
+			}
+		}
+	}
+	return m, nil
+}
+
+func (m *sidekicksScreen) View() string {
+	dim := lipgloss.NewStyle().Faint(true)
+	bold := lipgloss.NewStyle().Bold(true)
+
+	var lines []string
+	lines = append(lines, "")
+
+	if len(m.active) == 0 {
+		lines = append(lines, "  No active sidekicks.")
 		lines = append(lines, "")
-
-		if len(activeSidekicks) == 0 {
-			lines = append(lines, "  No active sidekicks.")
-			lines = append(lines, "")
-			lines = append(lines, engine.StyleDim("  Use 'go-clappie sidekick spawn \"prompt\"' to spawn one."))
-		} else {
-			lines = append(lines, fmt.Sprintf("  %d active sidekicks", len(activeSidekicks)))
-			lines = append(lines, "")
-
-			for i, sk := range activeSidekicks {
-				prefix := "  "
-				if i == selectedIdx {
-					prefix = "▸ "
-				}
-				line := fmt.Sprintf("%s%s: %s", prefix, sk.ID, sk.Prompt)
-				if len(line) > 65 {
-					line = line[:62] + "..."
-				}
-				if i == selectedIdx {
-					line = engine.StyleBold(line)
-				}
-				lines = append(lines, line)
+		lines = append(lines, dim.Render("  Use 'go-clappie sidekick spawn \"prompt\"' to spawn one."))
+	} else {
+		lines = append(lines, fmt.Sprintf("  %d active sidekicks", len(m.active)))
+		lines = append(lines, "")
+		for i, sk := range m.active {
+			prefix := "  "
+			if i == m.selectedIdx {
+				prefix = "▸ "
 			}
+			line := fmt.Sprintf("%s%s: %s", prefix, sk.ID, sk.Prompt)
+			if len(line) > 65 {
+				line = line[:62] + "..."
+			}
+			if i == m.selectedIdx {
+				line = bold.Render(line)
+			}
+			lines = append(lines, line)
 		}
-
-		ctx.Draw(lines)
 	}
 
-	view.RegisterShortcut("R", "Refresh", func() {
-		load()
-		render()
-	})
+	return strings.Join(lines, "\n")
+}
 
-	view.RegisterShortcut("K", "Kill Selected", func() {
-		if selectedIdx < len(activeSidekicks) {
-			root, _ := platform.ProjectRoot()
-			sidekicks.End(root)
-			load()
-			render()
-		}
-	})
-
-	return engine.View{
-		Init: func() {
-			load()
-			render()
-		},
-		Render: render,
-		OnKey: func(key string) bool {
-			switch key {
-			case "UP", "k":
-				if selectedIdx > 0 {
-					selectedIdx--
-					render()
-				}
-				return true
-			case "DOWN", "j":
-				if selectedIdx < len(activeSidekicks)-1 {
-					selectedIdx++
-					render()
-				}
-				return true
-			}
-			return view.HandleKey(key)
-		},
+func (m *sidekicksScreen) Name() string          { return "Sidekicks" }
+func (m *sidekicksScreen) Layout() (string, int) { return "centered", 70 }
+func (m *sidekicksScreen) Shortcuts() []engine.ShortcutHint {
+	return []engine.ShortcutHint{
+		{Key: "R", Label: "Refresh"},
+		{Key: "K", Label: "Kill Selected"},
 	}
 }

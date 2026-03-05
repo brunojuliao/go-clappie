@@ -31,10 +31,9 @@ func Start(root, name string) error {
 
 	sessionName := fmt.Sprintf("%s%s-%d", sessionPrefix, name, time.Now().Unix())
 
-	binary, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("get executable: %w", err)
-	}
+	// Use os.Args[0] instead of os.Executable() — on MSYS2/Git Bash,
+	// os.Executable() returns a Windows path that tmux's bash can't resolve.
+	binary := os.Args[0]
 
 	// Start the app in a new tmux session
 	return tmux.NewSession(sessionName, binary, "__daemon")

@@ -46,7 +46,9 @@ func SocketPath() string {
 	}
 	// Sanitize pane ID for use in filename
 	paneID = strings.ReplaceAll(paneID, "%", "")
-	return filepath.Join(os.TempDir(), fmt.Sprintf("go-clappie-%s.sock", paneID))
+	// Use filepath.ToSlash so the path is consistent across CLI and daemon
+	// on Windows (where it's only used for TCP port derivation via hash).
+	return filepath.ToSlash(filepath.Join(os.TempDir(), fmt.Sprintf("go-clappie-%s.sock", paneID)))
 }
 
 // EnsureDir creates a directory and all parents if they don't exist.

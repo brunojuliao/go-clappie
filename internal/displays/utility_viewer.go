@@ -3,63 +3,70 @@ package displays
 import (
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbles/viewport"
+
 	"github.com/brunojuliao/go-clappie/internal/engine"
 	"github.com/brunojuliao/go-clappie/internal/filestore"
-	"github.com/brunojuliao/go-clappie/internal/uikit"
 )
 
-// NewUtilityViewerView creates the utility file viewer view.
-func NewUtilityViewerView(ctx *engine.Context) engine.View {
-	view := uikit.NewView(ctx)
+type utilityViewerScreen struct {
+	viewport viewport.Model
+	content  string
+	styles   *engine.Styles
+	ready    bool
+}
 
-	ctx.SetTitle("Viewer")
-	ctx.SetLayout("full", 0)
-
+func NewUtilityViewerScreen(data map[string]interface{}, styles *engine.Styles, claudePane string) engine.ScreenModel {
 	content := ""
-	if ctx.Data != nil {
-		if c, ok := ctx.Data["content"].(string); ok {
+	if data != nil {
+		if c, ok := data["content"].(string); ok {
 			content = c
 		}
-		if path, ok := ctx.Data["path"].(string); ok {
-			data, err := filestore.ReadFile(path)
+		if path, ok := data["path"].(string); ok {
+			d, err := filestore.ReadFile(path)
 			if err == nil {
-				content = data
+				content = d
 			}
 		}
 	}
 
-	lines := strings.Split(content, "\n")
-	scrollTop := 0
-
-	render := func() {
-		var output []string
-		output = append(output, "")
-		for _, line := range lines {
-			output = append(output, "  "+line)
-		}
-		ctx.SetScrollTop(scrollTop)
-		ctx.Draw(output)
+	// Prefix each line with indent
+	var lines []string
+	for _, line := range strings.Split(content, "\n") {
+		lines = append(lines, "  "+line)
 	}
+	content = strings.Join(lines, "\n")
 
-	return engine.View{
-		Init:   render,
-		Render: render,
-		OnKey: func(key string) bool {
-			return view.HandleKey(key)
-		},
-		OnScroll: func(dir int) {
-			scrollTop += dir * 3
-			if scrollTop < 0 {
-				scrollTop = 0
-			}
-			max := len(lines) - 10
-			if max < 0 {
-				max = 0
-			}
-			if scrollTop > max {
-				scrollTop = max
-			}
-			render()
-		},
-	}
+	return &utilityViewerScreen{content: content, styles: styles}
 }
+
+func (m *utilityViewerScreen) Init() tea.Cmd { return nil }
+
+func (m *utilityViewerScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.viewport = viewport.New(msg.Width, msg.Height-4)
+		m.viewport.SetContent(m.content)
+		m.ready = true
+		return m, nil
+	}
+
+	if m.ready {
+		var cmd tea.Cmd
+		m.viewport, cmd = m.viewport.Update(msg)
+		return m, cmd
+	}
+	return m, nil
+}
+
+func (m *utilityViewerScreen) View() string {
+	if !m.ready {
+		return "Loading..."
+	}
+	return m.viewport.View()
+}
+
+func (m *utilityViewerScreen) Name() string                        { return "Viewer" }
+func (m *utilityViewerScreen) Layout() (string, int)               { return "full", 0 }
+func (m *utilityViewerScreen) Shortcuts() []engine.ShortcutHint { return nil }

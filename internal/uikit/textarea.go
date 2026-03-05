@@ -1,9 +1,8 @@
 package uikit
 
 import (
-	"strings"
-
-	"github.com/brunojuliao/go-clappie/internal/engine"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbles/textarea"
 )
 
 // TextareaConfig configures a textarea component.
@@ -12,211 +11,70 @@ type TextareaConfig struct {
 	Width       int
 	Height      int
 	Value       string
-	OnChange    func(string)
-	OnSubmit    func(string)
+	OnChange    func(string) tea.Cmd
+	OnSubmit    func(string) tea.Cmd
 }
 
-// Textarea is a multi-line text input component.
+// Textarea wraps bubbles/textarea.Model.
 type Textarea struct {
-	ComponentBase
-	config    TextareaConfig
-	lines     []string
-	cursorRow int
-	cursorCol int
-	scrollTop int
-	height    int
+	config TextareaConfig
+	model  textarea.Model
 }
 
 // NewTextarea creates a new textarea.
-func NewTextarea(cfg TextareaConfig) *Textarea {
-	w := cfg.Width
-	if w == 0 {
-		w = 40
+func NewTextarea(cfg TextareaConfig) Textarea {
+	m := textarea.New()
+	m.Placeholder = cfg.Placeholder
+	if cfg.Width > 0 {
+		m.SetWidth(cfg.Width)
 	}
-	h := cfg.Height
-	if h == 0 {
-		h = 5
+	if cfg.Height > 0 {
+		m.SetHeight(cfg.Height)
 	}
-
-	lines := []string{""}
 	if cfg.Value != "" {
-		lines = strings.Split(cfg.Value, "\n")
+		m.SetValue(cfg.Value)
 	}
-
-	return &Textarea{
-		ComponentBase: ComponentBase{Focusable: true, Width: w},
-		config:        cfg,
-		lines:         lines,
-		height:        h,
-	}
+	return Textarea{config: cfg, model: m}
 }
 
-// Render renders the textarea.
-func (ta *Textarea) Render(focused bool) []string {
-	w := ta.GetWidth()
-	innerWidth := w - 4
+func (ta Textarea) Init() tea.Cmd { return nil }
 
-	border := "─"
-	if focused {
-		border = "━"
+func (ta Textarea) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	oldVal := ta.model.Value()
+	ta.model, cmd = ta.model.Update(msg)
+
+	if ta.model.Value() != oldVal && ta.config.OnChange != nil {
+		changeCm := ta.config.OnChange(ta.model.Value())
+		return ta, tea.Batch(cmd, changeCm)
 	}
 
-	var output []string
-	output = append(output, "┌"+strings.Repeat(border, w-2)+"┐")
-
-	for i := 0; i < ta.height; i++ {
-		lineIdx := ta.scrollTop + i
-		var content string
-		if lineIdx < len(ta.lines) {
-			content = ta.lines[lineIdx]
-		} else if i == 0 && len(ta.lines) == 1 && ta.lines[0] == "" && !focused {
-			content = engine.StyleDim(ta.config.Placeholder)
-		}
-
-		// Truncate if needed
-		stripped := engine.StripANSI(content)
-		if engine.VisualWidth(stripped) > innerWidth {
-			content = engine.TruncateToWidth(stripped, innerWidth, "")
-		}
-
-		padded := engine.PadRight(" "+content, w-2)
-		output = append(output, "│"+padded+"│")
-	}
-
-	output = append(output, "└"+strings.Repeat(border, w-2)+"┘")
-	return output
+	return ta, cmd
 }
 
-// OnKey handles key events for textarea.
-func (ta *Textarea) OnKey(key string) bool {
-	switch key {
-	case "ENTER":
-		// Check for Ctrl+Enter as submit
-		// Regular enter inserts newline
-		rest := ""
-		if ta.cursorCol < len([]rune(ta.lines[ta.cursorRow])) {
-			runes := []rune(ta.lines[ta.cursorRow])
-			rest = string(runes[ta.cursorCol:])
-			ta.lines[ta.cursorRow] = string(runes[:ta.cursorCol])
-		}
-		ta.cursorRow++
-		ta.cursorCol = 0
-		// Insert new line
-		newLines := make([]string, len(ta.lines)+1)
-		copy(newLines, ta.lines[:ta.cursorRow])
-		newLines[ta.cursorRow] = rest
-		copy(newLines[ta.cursorRow+1:], ta.lines[ta.cursorRow:])
-		ta.lines = newLines
-		ta.adjustScroll()
-		ta.notifyChange()
-		return true
-
-	case "BACKSPACE":
-		if ta.cursorCol > 0 {
-			runes := []rune(ta.lines[ta.cursorRow])
-			ta.lines[ta.cursorRow] = string(runes[:ta.cursorCol-1]) + string(runes[ta.cursorCol:])
-			ta.cursorCol--
-			ta.notifyChange()
-		} else if ta.cursorRow > 0 {
-			prevLen := len([]rune(ta.lines[ta.cursorRow-1]))
-			ta.lines[ta.cursorRow-1] += ta.lines[ta.cursorRow]
-			ta.lines = append(ta.lines[:ta.cursorRow], ta.lines[ta.cursorRow+1:]...)
-			ta.cursorRow--
-			ta.cursorCol = prevLen
-			ta.adjustScroll()
-			ta.notifyChange()
-		}
-		return true
-
-	case "UP":
-		if ta.cursorRow > 0 {
-			ta.cursorRow--
-			runes := []rune(ta.lines[ta.cursorRow])
-			if ta.cursorCol > len(runes) {
-				ta.cursorCol = len(runes)
-			}
-			ta.adjustScroll()
-		}
-		return true
-
-	case "DOWN":
-		if ta.cursorRow < len(ta.lines)-1 {
-			ta.cursorRow++
-			runes := []rune(ta.lines[ta.cursorRow])
-			if ta.cursorCol > len(runes) {
-				ta.cursorCol = len(runes)
-			}
-			ta.adjustScroll()
-		}
-		return true
-
-	case "LEFT":
-		if ta.cursorCol > 0 {
-			ta.cursorCol--
-		} else if ta.cursorRow > 0 {
-			ta.cursorRow--
-			ta.cursorCol = len([]rune(ta.lines[ta.cursorRow]))
-			ta.adjustScroll()
-		}
-		return true
-
-	case "RIGHT":
-		runes := []rune(ta.lines[ta.cursorRow])
-		if ta.cursorCol < len(runes) {
-			ta.cursorCol++
-		} else if ta.cursorRow < len(ta.lines)-1 {
-			ta.cursorRow++
-			ta.cursorCol = 0
-			ta.adjustScroll()
-		}
-		return true
-
-	case "HOME", "CTRL_A":
-		ta.cursorCol = 0
-		return true
-
-	case "END", "CTRL_E":
-		ta.cursorCol = len([]rune(ta.lines[ta.cursorRow]))
-		return true
-
-	default:
-		// Printable character
-		r := []rune(key)
-		if len(r) == 1 && r[0] >= 32 {
-			runes := []rune(ta.lines[ta.cursorRow])
-			ta.lines[ta.cursorRow] = string(runes[:ta.cursorCol]) + key + string(runes[ta.cursorCol:])
-			ta.cursorCol++
-			ta.notifyChange()
-			return true
-		}
-	}
-	return false
+func (ta Textarea) View() string {
+	return ta.model.View()
 }
 
-func (ta *Textarea) adjustScroll() {
-	if ta.cursorRow < ta.scrollTop {
-		ta.scrollTop = ta.cursorRow
-	}
-	if ta.cursorRow >= ta.scrollTop+ta.height {
-		ta.scrollTop = ta.cursorRow - ta.height + 1
-	}
+func (ta Textarea) IsFocusable() bool { return true }
+func (ta Textarea) Focused() bool     { return ta.model.Focused() }
+
+func (ta Textarea) Focus() Component {
+	ta.model.Focus()
+	return ta
 }
 
-func (ta *Textarea) notifyChange() {
-	if ta.config.OnChange != nil {
-		ta.config.OnChange(ta.Value())
-	}
+func (ta Textarea) Blur() Component {
+	ta.model.Blur()
+	return ta
 }
 
 // Value returns the current textarea content.
-func (ta *Textarea) Value() string {
-	return strings.Join(ta.lines, "\n")
+func (ta Textarea) Value() string {
+	return ta.model.Value()
 }
 
 // SetValue sets the textarea content.
 func (ta *Textarea) SetValue(v string) {
-	ta.lines = strings.Split(v, "\n")
-	ta.cursorRow = 0
-	ta.cursorCol = 0
-	ta.scrollTop = 0
+	ta.model.SetValue(v)
 }

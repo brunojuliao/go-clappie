@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -215,54 +214,6 @@ func (t *Theme) C(name string) RGB {
 	return RGB{128, 128, 128}
 }
 
-// FG wraps text in the theme's foreground color.
-func (t *Theme) FG(text string) string {
-	c := t.C("text")
-	return Color(c.R, c.G, c.B, text)
-}
-
-// BG wraps text in the theme's background color.
-func (t *Theme) BG(text string) string {
-	c := t.C("background")
-	return BgColor(c.R, c.G, c.B, text)
-}
-
-// Dim wraps text in the theme's muted text color.
-func (t *Theme) Dim(text string) string {
-	c := t.C("textMuted")
-	return Color(c.R, c.G, c.B, text)
-}
-
-// Success wraps text in success color.
-func (t *Theme) Success(text string) string {
-	c := t.C("success")
-	return Color(c.R, c.G, c.B, text)
-}
-
-// Error wraps text in error color.
-func (t *Theme) Error(text string) string {
-	c := t.C("error")
-	return Color(c.R, c.G, c.B, text)
-}
-
-// Warning wraps text in warning color.
-func (t *Theme) Warning(text string) string {
-	c := t.C("warning")
-	return Color(c.R, c.G, c.B, text)
-}
-
-// Info wraps text in info color.
-func (t *Theme) Info(text string) string {
-	c := t.C("info")
-	return Color(c.R, c.G, c.B, text)
-}
-
-// ColorText applies a named color to text.
-func (t *Theme) ColorText(colorName, text string) string {
-	c := t.C(colorName)
-	return Color(c.R, c.G, c.B, text)
-}
-
 func hexToRGB(hex string) (RGB, bool) {
 	hex = strings.TrimPrefix(hex, "#")
 	if len(hex) != 6 {
@@ -283,12 +234,3 @@ func hexToRGB(hex string) (RGB, bool) {
 	return RGB{int(r), int(g), int(b)}, true
 }
 
-// FormatRGB returns the ANSI foreground color sequence for an RGB value.
-func FormatRGB(c RGB) string {
-	return fmt.Sprintf("\x1b[38;2;%d;%d;%dm", c.R, c.G, c.B)
-}
-
-// FormatBgRGB returns the ANSI background color sequence for an RGB value.
-func FormatBgRGB(c RGB) string {
-	return fmt.Sprintf("\x1b[48;2;%d;%d;%dm", c.R, c.G, c.B)
-}

@@ -3,7 +3,8 @@ package uikit
 import (
 	"fmt"
 
-	"github.com/brunojuliao/go-clappie/internal/engine"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // ToggleStyle represents toggle visual styles.
@@ -19,39 +20,51 @@ type ToggleConfig struct {
 	Label    string
 	Shortcut string
 	Value    bool
-	OnChange func(bool)
+	OnChange func(bool) tea.Cmd
 	Style    ToggleStyle
 	Width    int
 }
 
 // Toggle is a binary on/off switch component.
 type Toggle struct {
-	ComponentBase
-	config ToggleConfig
-	value  bool
+	config  ToggleConfig
+	value   bool
+	focused bool
+	width   int
 }
 
 // NewToggle creates a new toggle.
-func NewToggle(cfg ToggleConfig) *Toggle {
+func NewToggle(cfg ToggleConfig) Toggle {
 	w := cfg.Width
 	if w == 0 {
-		w = engine.VisualWidth(cfg.Label) + 10
+		w = len(cfg.Label) + 10
 	}
-	return &Toggle{
-		ComponentBase: ComponentBase{Focusable: true, Width: w},
-		config:        cfg,
-		value:         cfg.Value,
-	}
+	return Toggle{config: cfg, value: cfg.Value, width: w}
 }
 
 // NewToggleBlock creates a block-style toggle.
-func NewToggleBlock(cfg ToggleConfig) *Toggle {
+func NewToggleBlock(cfg ToggleConfig) Toggle {
 	cfg.Style = ToggleStyleBlock
 	return NewToggle(cfg)
 }
 
-// Render renders the toggle.
-func (t *Toggle) Render(focused bool) []string {
+func (t Toggle) Init() tea.Cmd { return nil }
+
+func (t Toggle) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		switch keyMsg.String() {
+		case "enter", " ":
+			t.value = !t.value
+			if t.config.OnChange != nil {
+				return t, t.config.OnChange(t.value)
+			}
+			return t, nil
+		}
+	}
+	return t, nil
+}
+
+func (t Toggle) View() string {
 	indicator := "○"
 	if t.value {
 		indicator = "●"
@@ -64,44 +77,35 @@ func (t *Toggle) Render(focused bool) []string {
 
 	line := fmt.Sprintf("  %s %s", indicator, label)
 
-	if focused {
-		line = engine.StyleBold(line)
-	}
-
 	if t.config.Style == ToggleStyleBlock {
-		w := t.GetWidth()
-		line = engine.PadRight(line, w)
-		if focused {
-			line = engine.StyleInverse(line)
+		style := lipgloss.NewStyle().Width(t.width)
+		if t.focused {
+			style = style.Bold(true).Reverse(true)
 		}
+		return style.Render(line)
 	}
 
-	return []string{line}
+	if t.focused {
+		return lipgloss.NewStyle().Bold(true).Render(line)
+	}
+	return line
 }
 
-// OnKey handles key events.
-func (t *Toggle) OnKey(key string) bool {
-	if key == "ENTER" || key == "SPACE" {
-		t.value = !t.value
-		if t.config.OnChange != nil {
-			t.config.OnChange(t.value)
-		}
-		return true
-	}
-	return false
+func (t Toggle) IsFocusable() bool { return true }
+func (t Toggle) Focused() bool     { return t.focused }
+
+func (t Toggle) Focus() Component {
+	t.focused = true
+	return t
 }
 
-// OnClick handles click events.
-func (t *Toggle) OnClick(lineIdx, col int) bool {
-	t.value = !t.value
-	if t.config.OnChange != nil {
-		t.config.OnChange(t.value)
-	}
-	return true
+func (t Toggle) Blur() Component {
+	t.focused = false
+	return t
 }
 
 // Value returns the current toggle state.
-func (t *Toggle) Value() bool {
+func (t Toggle) Value() bool {
 	return t.value
 }
 

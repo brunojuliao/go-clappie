@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -165,23 +166,17 @@ func startDaemon(initialView string, initialData json.RawMessage) error {
 	}
 	isMobile := h > w || w < 120
 
-	// Build the daemon command
-	binary, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("get executable path: %w", err)
-	}
+	// Build the daemon command using CLI flags instead of env vars.
+	// On Windows/MSYS2, the VAR=value command syntax doesn't work reliably
+	// in tmux's shell, and os.Executable() returns Windows paths that bash
+	// can't resolve. Using filepath.Base + flags avoids both issues.
+	binary := filepath.Base(os.Args[0])
 
-	// Prepare environment
-	env := fmt.Sprintf("GO_CLAPPIE_CLAUDE_PANE=%s GO_CLAPPIE_SOCKET_PATH=%s GO_CLAPPIE_INITIAL_VIEW=%s",
-		claudePane, socketPath, initialView)
+	daemonCmd := fmt.Sprintf("%s __daemon --socket %q --view %s --claude-pane %s",
+		binary, socketPath, initialView, claudePane)
 	if initialData != nil {
-		env += fmt.Sprintf(" GO_CLAPPIE_INITIAL_DATA='%s'", string(initialData))
+		daemonCmd += fmt.Sprintf(" --data %q", string(initialData))
 	}
-	if os.Getenv("GO_CLAPPIE_ALLOW_SENDKEYS") != "" {
-		env += " GO_CLAPPIE_ALLOW_SENDKEYS=1"
-	}
-
-	daemonCmd := fmt.Sprintf("%s %s __daemon", env, binary)
 
 	var paneID string
 	if isMobile {
