@@ -35,6 +35,7 @@ Go-Clappie is a complete rewrite of the original JavaScript/Bun-based Clappie fr
 
 - **Go 1.25+** (for building from source)
 - **tmux** (required at runtime)
+- **winpty** (required on Windows/MSYS2 for TUI apps inside tmux)
 - A terminal emulator with ANSI color support
 
 ## Installation
@@ -121,15 +122,15 @@ brew install tmux
 
 ### Windows
 
-Go-Clappie on Windows requires **Git for Windows** (Git Bash) with **tmux** installed manually. tmux is not included with Git Bash by default.
+Go-Clappie on Windows requires **Git for Windows** (Git Bash) with **tmux** and **winpty** installed manually. Neither is included with Git Bash by default.
 
 #### Option A: Via MSYS2 (Recommended)
 
 1. **Install [MSYS2](https://www.msys2.org/)** if you don't have it already.
 
-2. **Install tmux in MSYS2:**
+2. **Install tmux and winpty in MSYS2:**
    ```bash
-   pacman -S tmux
+   pacman -S tmux winpty
    ```
 
 3. **Copy the required files** from MSYS2 to Git for Windows:
@@ -138,19 +139,33 @@ Go-Clappie on Windows requires **Git for Windows** (Git Bash) with **tmux** inst
    - `tmux.exe`
    - `msys-event-2-1-*.dll` (e.g., `msys-event-2-1-7.dll`)
    - `msys-event_core-2-1-*.dll` (if present)
+   - `winpty.exe`
+   - `winpty-agent.exe`
 
 4. **Restart Git Bash** and verify:
    ```bash
    tmux -V
+   winpty --version
    ```
 
 #### Option B: Direct Package Download
 
-1. **Download packages** from the [MSYS2 repository](https://repo.msys2.org/msys/x86_64/):
-   - `tmux-*.pkg.tar.zst`
-   - `libevent-*.pkg.tar.xz`
+Download packages from the [MSYS2 repository](https://repo.msys2.org/msys/x86_64/):
 
-2. **Extract and copy** `tmux.exe` and the `msys-event` DLLs to `C:\Program Files\Git\usr\bin\`.
+1. **tmux:**
+   - `tmux-*.pkg.tar.zst`
+   - `libevent-*.pkg.tar.xz` (dependency)
+
+2. **winpty:**
+   - `winpty-*.pkg.tar.zst`
+
+3. **Extract and copy** the binaries to `C:\Program Files\Git\usr\bin\`:
+   - `tmux.exe` + `msys-event*.dll` (from tmux and libevent packages)
+   - `winpty.exe` + `winpty-agent.exe` (from winpty package)
+
+#### Why winpty?
+
+Native Windows binaries (like Claude Code and go-clappie's display daemon) can't interact with MSYS2 PTYs directly. `winpty` bridges the gap by creating a real Windows console. Go-clappie auto-detects winpty and uses it when available.
 
 #### Important Notes for Windows
 
