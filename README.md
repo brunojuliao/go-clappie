@@ -30,6 +30,7 @@ Go-Clappie is a complete rewrite of the original JavaScript/Bun-based Clappie fr
 | **OAuth** | Shared token management with PKCE auth flows |
 | **Skills** | Skill discovery from `.claude/skills/*/` directories |
 | **Graphics** | Unicode quarter-block pixel art and animated scenes |
+| **Telegram** | Bidirectional messaging via [telegram-bridge](https://github.com/brunojuliao/go-clappie-telegram-bridge) (separate binary) |
 
 ## Requirements
 
@@ -284,6 +285,13 @@ created: 2025-03-03 14:30
 ### Import Cycle Resolution
 
 The `engine` package cannot import `displays` (circular dependency). Solution: the view registry is injected via `AppConfig.Registry` at startup from `cmd/daemon.go`.
+
+## Related Projects
+
+| Project | Description |
+|---------|-------------|
+| [go-clappie-telegram-bridge](https://github.com/brunojuliao/go-clappie-telegram-bridge) | Lightweight Telegram bot that plugs into go-clappie's file-based ecosystem. Incoming messages land in `notifications/dirty/`, Claude replies via `notifications/outbox/`. Runs as a companion binary in a tmux window alongside Claude. |
+| [Clappie](https://github.com/whatnickcodes/clappie) | The original JavaScript/Bun framework that go-clappie is a full Go port of. |
 
 ## Credits
 
