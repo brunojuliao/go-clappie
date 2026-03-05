@@ -1,6 +1,7 @@
 package scaffold
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,9 +19,12 @@ type Result struct {
 func Run(root string) Result {
 	var r Result
 
-	// Skill file
+	// Skill files
 	skillPath := filepath.Join(root, ".claude", "skills", "go-clappie", "SKILL.md")
-	writeIfMissing(skillPath, SkillMD, &r)
+	writeIfChanged(skillPath, SkillMD, &r)
+
+	telegramSkillPath := filepath.Join(root, ".claude", "skills", "telegram-bot", "SKILL.md")
+	writeIfChanged(telegramSkillPath, TelegramBotSkillMD, &r)
 
 	// CLAUDE.md — skip if exists, append section if exists without go-clappie reference
 	claudePath := filepath.Join(root, "CLAUDE.md")
@@ -32,6 +36,7 @@ func Run(root string) Result {
 		"chores/bots",
 		"notifications/dirty",
 		"notifications/clean",
+		"notifications/outbox",
 		"recall/memory",
 		"recall/logs",
 		"recall/settings",
@@ -47,8 +52,9 @@ func Run(root string) Result {
 	return r
 }
 
-func writeIfMissing(path string, content []byte, r *Result) {
-	if _, err := os.Stat(path); err == nil {
+func writeIfChanged(path string, content []byte, r *Result) {
+	existing, err := os.ReadFile(path)
+	if err == nil && bytes.Equal(existing, content) {
 		r.Skipped = append(r.Skipped, path)
 		return
 	}

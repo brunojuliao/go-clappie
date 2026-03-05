@@ -7,3 +7,6 @@ var SkillMD []byte
 
 //go:embed templates/CLAUDE.md
 var ClaudeMD []byte
+
+//go:embed templates/telegram-bot-SKILL.md
+var TelegramBotSkillMD []byte
